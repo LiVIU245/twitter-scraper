@@ -8,7 +8,7 @@ import {
   TimelineEntryItemContentRaw,
   parseTimelineEntryItemContentRaw,
   ThreadedConversation,
-  parseThreadedConversation,
+  parseThreadedConversation, parseThreadedConversationReplies,
 } from './timeline-v2';
 import { getTweetTimeline } from './timeline-async';
 import stringify from 'json-stable-stringify';
@@ -17,6 +17,11 @@ import { apiRequestFactory } from './api-data';
 export interface Mention {
   id: string;
   username?: string;
+  name?: string;
+}
+
+export interface Replier {
+  id: string;
   name?: string;
 }
 
@@ -82,6 +87,13 @@ export interface Tweet {
   videos: Video[];
   views?: number;
   sensitiveContent?: boolean;
+  next?:string
+  previous?:string
+}
+
+export interface TweetCursor {
+  next?: string;
+  previous?: string;
 }
 
 export type TweetQuery =
@@ -239,6 +251,54 @@ export async function getTweet(
 
   const tweets = parseThreadedConversation(res.value);
   return tweets.find((tweet) => tweet.id === id) ?? null;
+}
+
+export async function getTweetReplies(
+  id: string,
+  auth: TwitterAuth,
+): Promise<Replier[] | null> {
+  if (!auth.isLoggedIn()) {
+    throw new Error('Scraper is not logged-in for repliers.');
+  }
+
+  const tweetDetailRequest = apiRequestFactory.createTweetDetailRequest();
+  tweetDetailRequest.variables.focalTweetId = id;
+
+  let repliesAll: Replier[] = []
+  let loop: boolean = true
+  let cursor: string | undefined = undefined
+
+  while(loop){
+    if(cursor){
+      tweetDetailRequest.variables.cursor = cursor;
+    }
+
+    const res = await requestApi<ThreadedConversation>(
+        tweetDetailRequest.toRequestUrl(),
+        auth,
+    );
+
+    if (!res.success) {
+      throw res.err;
+    }
+
+    if (!res.value) {
+      return null;
+    }
+
+    const {next,tweets,previous} = await parseThreadedConversationReplies(res.value);
+    if(tweets.length == 0 || !next){
+      loop = false;
+      break;
+    }
+
+    cursor = next;
+    repliesAll = [...repliesAll,...tweets];
+  }
+
+  repliesAll = repliesAll.filter((v,i,a)=>a.findIndex(t=>(t.id === v.id))===i)
+
+  return repliesAll;
 }
 
 export async function getTweetAnonymous(

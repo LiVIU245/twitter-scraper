@@ -16,7 +16,7 @@ import {
   getFollowing,
   getFollowers,
 } from './relationships';
-import { QueryProfilesResponse, QueryTweetsResponse } from './timeline-v1';
+import {QueryProfilesResponse, QueryRetweetsResponse, QueryTweetsResponse} from './timeline-v1';
 import { getTrends } from './trends';
 import {
   Tweet,
@@ -27,9 +27,11 @@ import {
   getTweetsWhere,
   getTweetsByUserId,
   TweetQuery,
-  getTweet,
+  getTweet, getTweetReplies, Replier,
 } from './tweets';
 import fetch from 'cross-fetch';
+import {getRetweets, Retweet} from "./retweets";
+import {getFavoriters} from "./favoriters";
 
 const twUrl = 'https://twitter.com';
 
@@ -316,6 +318,31 @@ export class Scraper {
     } else {
       return getTweetAnonymous(id, this.auth);
     }
+  }
+  /**
+   * Fetches a single tweet.
+   * @param id The ID of the tweet to fetch.
+   * @returns The {@link Tweet} object, or `null` if it couldn't be fetched.
+   */
+  public getTweetRepliers(id: string): Promise<Replier[] | null> {
+    return getTweetReplies(id, this.auth);
+  }
+
+  /**
+   * Fetches a list of a tweet's retweet.
+   * @param id The ID of the tweet to fetch retweets.
+   * @returns The {@link Tweet} object, or `null` if it couldn't be fetched.
+   */
+  public getRetweets(id: string): Promise<Retweet[] | null> {
+      return getRetweets(id, this.auth);
+  }
+  /**
+   * Fetches a list of a tweet's retweet.
+   * @param id The ID of the tweet to fetch retweets.
+   * @returns The {@link Tweet} object, or `null` if it couldn't be fetched.
+   */
+  public getFavoriters(id: string): Promise<Retweet[] | null> {
+      return getFavoriters(id, this.auth);
   }
 
   /**

@@ -2,6 +2,8 @@ import { LegacyUserRaw, parseProfile, Profile } from './profile';
 import { parseMediaGroups, reconstructTweetHtml } from './timeline-tweet-util';
 import { PlaceRaw, Tweet } from './tweets';
 import { isFieldDefined } from './type-util';
+import {Retweet} from "./retweets";
+import {Favoriter} from "./favoriters";
 
 export interface Hashtag {
   text?: string;
@@ -424,6 +426,15 @@ export function parseTimelineTweetsV1(
  */
 export interface QueryProfilesResponse {
   profiles: Profile[];
+  next?: string;
+  previous?: string;
+}
+
+/**
+ * A paginated profiles API response. The `next` field can be used to fetch the next page of results.
+ */
+export interface QueryRetweetsResponse {
+  values: Retweet[] | Favoriter[];
   next?: string;
   previous?: string;
 }

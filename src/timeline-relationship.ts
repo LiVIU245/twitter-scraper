@@ -1,6 +1,8 @@
 import { Profile, parseProfile } from './profile';
-import { QueryProfilesResponse } from './timeline-v1';
-import { TimelineUserResultRaw } from './timeline-v2';
+import {QueryProfilesResponse, QueryRetweetsResponse} from './timeline-v1';
+import {TimelineData, TimelineInstruction, TimelineUserResultRaw} from './timeline-v2';
+import {Retweet} from "./retweets";
+import {Favoriter} from "./favoriters";
 
 export interface RelationshipEntryItemContentRaw {
   itemType?: string;
@@ -92,4 +94,70 @@ export function parseRelationshipTimeline(
   }
 
   return { profiles, next: bottomCursor, previous: topCursor };
+}
+
+export function parseEngagementimeline(
+  timeline: TimelineData,
+  type: string,
+): QueryRetweetsResponse {
+  let bottomCursor: string | undefined;
+  let topCursor: string | undefined;
+  const values: Retweet[] | Favoriter[] = [];
+
+  let instructions: TimelineInstruction[] = []
+  if(type == 'retweets') {
+     instructions =
+        timeline.data?.retweeters_timeline?.timeline?.instructions ?? [];
+  }
+  if(type == 'favoriters') {
+    instructions =
+        timeline.data?.favoriters_timeline?.timeline?.instructions ?? [];
+  }
+
+  for (const instruction of instructions) {
+    if (
+      instruction.type === 'TimelineAddEntries' ||
+      instruction.type === 'TimelineReplaceEntry'
+    ) {
+      if (instruction.entry?.content?.cursorType === 'Bottom') {
+        bottomCursor = instruction.entry.content.value;
+        continue;
+      }
+
+      if (instruction.entry?.content?.cursorType === 'Top') {
+        topCursor = instruction.entry.content.value;
+        continue;
+      }
+
+      const entries = instruction.entries ?? [];
+      for (const entry of entries) {
+        const itemContent = entry.content?.itemContent;
+        if (itemContent?.userDisplayType === 'User') {
+          const userResultRaw = itemContent.user_results?.result;
+
+          if (userResultRaw?.legacy) {
+            const profile = parseProfile(
+              userResultRaw.legacy,
+              userResultRaw.is_blue_verified,
+            );
+
+            if (!profile.userId) {
+              profile.userId = userResultRaw.rest_id;
+            }
+
+            values.push({
+                name: profile.username,
+                id: profile.userId,
+            });
+          }
+        } else if (entry.content?.cursorType === 'Bottom') {
+          bottomCursor = entry.content.value;
+        } else if (entry.content?.cursorType === 'Top') {
+          topCursor = entry.content.value;
+        }
+      }
+    }
+  }
+
+  return { values, next: bottomCursor, previous: topCursor };
 }

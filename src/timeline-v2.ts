@@ -7,7 +7,7 @@ import {
   SearchResultRaw,
   TimelineResultRaw,
 } from './timeline-v1';
-import { Tweet } from './tweets';
+import {Tweet, TweetCursor} from './tweets';
 import { isFieldDefined } from './type-util';
 
 export interface TimelineUserResultRaw {
@@ -29,6 +29,10 @@ export interface TimelineEntryItemContentRaw {
   user_results?: {
     result?: TimelineUserResultRaw;
   };
+  __typename?: string;
+  itemContent?: any;
+  value?: string;
+  cursorType?: string;
 }
 
 export interface TimelineEntryRaw {
@@ -39,6 +43,7 @@ export interface TimelineEntryRaw {
     items?: {
       item?: {
         content?: TimelineEntryItemContentRaw;
+        itemContent?: TimelineEntryItemContentRaw;
       };
     }[];
     itemContent?: TimelineEntryItemContentRaw;
@@ -88,6 +93,20 @@ export interface TimelineV2 {
             instructions?: TimelineInstruction[];
           };
         };
+      };
+    };
+  };
+}
+export interface TimelineData {
+  data?: {
+    favoriters_timeline?: {
+      timeline?: {
+        instructions?: TimelineInstruction[];
+      };
+    };
+    retweeters_timeline?: {
+      timeline?: {
+        instructions?: TimelineInstruction[];
       };
     };
   };
@@ -334,6 +353,34 @@ export function parseTimelineEntryItemContentRaw(
   return null;
 }
 
+export function parseRepliesTimelineEntryItemContentRaw(
+    content: TimelineEntryItemContentRaw,
+    entryId: string,
+    isConversation = false,
+) {
+  const result = content.tweet_results?.result ?? content.tweetResult?.result;
+  if (result?.__typename === 'Tweet') {
+    if (result.legacy) {
+      result.legacy.id_str = entryId
+          .replace('conversation-', '')
+          .replace('tweet-', '');
+    }
+
+    const tweetResult = parseResult(result);
+    if (tweetResult.success) {
+      if (isConversation) {
+        if (content?.tweetDisplayType === 'SelfThread') {
+          tweetResult.tweet.isSelfThread = true;
+        }
+      }
+
+      return {name:tweetResult.tweet.username,id:tweetResult.tweet.userId};
+    }
+  }
+
+  return null;
+}
+
 function parseAndPush(
   tweets: Tweet[],
   content: TimelineEntryItemContentRaw,
@@ -341,6 +388,22 @@ function parseAndPush(
   isConversation = false,
 ) {
   const tweet = parseTimelineEntryItemContentRaw(
+    content,
+    entryId,
+    isConversation,
+  );
+
+  if (tweet) {
+    tweets.push(tweet);
+  }
+}
+function parseAndPushReplies(
+  tweets: Tweet[] | any,
+  content: TimelineEntryItemContentRaw,
+  entryId: string,
+  isConversation = false,
+) {
+  const tweet = parseRepliesTimelineEntryItemContentRaw(
     content,
     entryId,
     isConversation,
@@ -400,4 +463,43 @@ export function parseThreadedConversation(
   }
 
   return tweets;
+}
+export function parseThreadedConversationReplies(
+  conversation: ThreadedConversation,
+): any {
+  const tweets: Tweet[] = [];
+  const instructions =
+    conversation.data?.threaded_conversation_with_injections_v2?.instructions ??
+    [];
+
+  let previous: string | undefined;
+  let next: string | undefined;
+
+  for (const instruction of instructions) {
+    const entries = instruction.entries ?? [];
+    for (const entry of entries) {
+      const entryContent = entry.content?.itemContent;
+      if (entryContent) {
+        parseAndPushReplies(tweets, entryContent, entry.entryId, true);
+      }
+
+      if (entryContent?.__typename === 'TimelineTimelineCursor') {
+        if(entryContent?.cursorType === 'Bottom' || entryContent?.cursorType === 'ShowMoreThreads' || entryContent?.cursorType === 'ShowMoreThreadsPrompt'){
+          next = entryContent?.value;
+        }
+        if(entryContent?.cursorType === 'Top'){
+          previous = entryContent?.value;
+        }
+      }
+
+      for (const item of entry.content?.items ?? []) {
+        const itemContent = item.item?.content ?? item.item?.itemContent;
+        if (itemContent) {
+          parseAndPushReplies(tweets, itemContent, entry.entryId, true);
+        }
+      }
+    }
+  }
+
+  return {next:next,tweets:tweets, previous:previous};
 }
