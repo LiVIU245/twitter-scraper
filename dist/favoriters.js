@@ -26,7 +26,6 @@ async function getFavoriters(id, auth) {
             return null;
         }
         let { next, values, previous } = (0, timeline_relationship_1.parseEngagementimeline)(res.value, 'favoriters');
-        console.log(values);
         if (values.length == 0) {
             loop = false;
             break;

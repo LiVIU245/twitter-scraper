@@ -43,8 +43,6 @@ async function requestApi(url, auth, method = 'GET') {
             const xRateLimitRemaining = res.headers.get('x-rate-limit-remaining');
             const xRateLimitReset = res.headers.get('x-rate-limit-reset');
             if (xRateLimitRemaining == '0' && xRateLimitReset) {
-                console.log('Rate limited, waiting...');
-                console.log(xRateLimitReset);
                 const currentTime = new Date().valueOf() / 1000;
                 const timeDeltaMs = 1000 * (parseInt(xRateLimitReset) - currentTime);
                 // I have seen this block for 800s (~13 *minutes*)

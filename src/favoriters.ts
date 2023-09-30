@@ -44,7 +44,6 @@ export async function getFavoriters(
     }
 
     let {next,values,previous} = parseEngagementimeline(res.value,'favoriters');
-    console.log(values)
     if(values.length == 0){
       loop = false;
       break;
