@@ -20,7 +20,8 @@ export async function getRetweets(
 
   const retweetRequest = apiRequestFactory.createRetweetersRequest();
   retweetRequest.variables.tweetId = id;
-  retweetRequest.variables.count = '20';
+  retweetRequest.variables.count = 20;
+  delete retweetRequest.variables.cursor;
 
   let retweetsAll: Retweet[] = []
   let loop: boolean = true
