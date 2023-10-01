@@ -10,7 +10,8 @@ async function getFavoriters(id, auth) {
     }
     const favoritersRequest = api_data_1.apiRequestFactory.createFavoritersRequest();
     favoritersRequest.variables.tweetId = id;
-    favoritersRequest.variables.count = '20';
+    favoritersRequest.variables.count = 20;
+    delete favoritersRequest.variables.cursor;
     let favoritersAll = [];
     let loop = true;
     let cursor = undefined;
