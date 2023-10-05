@@ -30,6 +30,7 @@ test('scraper can get tweet', async () => {
 
   const scraper = await getScraper();
   const actual = await scraper.getTweet('1585338303800578049');
+
   delete actual?.likes;
   delete actual?.replies;
   delete actual?.retweets;

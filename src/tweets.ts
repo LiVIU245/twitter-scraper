@@ -87,6 +87,7 @@ export interface Tweet {
   videos: Video[];
   views?: number;
   sensitiveContent?: boolean;
+  profileImageUrl?:string
   next?:string
   previous?:string
 }

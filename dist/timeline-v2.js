@@ -55,6 +55,7 @@ function parseLegacyTweet(user, tweet) {
             .map((url) => url.expanded_url),
         userId: tweet.user_id_str,
         username: user.screen_name,
+        profileImageUrl: user.profile_image_url_https,
         videos,
         isQuoted: false,
         isReply: false,
