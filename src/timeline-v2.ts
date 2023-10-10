@@ -375,7 +375,7 @@ export function parseRepliesTimelineEntryItemContentRaw(
         }
       }
 
-      return {name:tweetResult.tweet.username,id:tweetResult.tweet.userId};
+      return {name:tweetResult.tweet.username,id:tweetResult.tweet.userId,text:tweetResult.tweet.text};
     }
   }
 
