@@ -122,7 +122,12 @@ async function getTweetReplies(id, auth) {
             return null;
         }
         const { next, tweets, previous } = await (0, timeline_v2_1.parseThreadedConversationReplies)(res.value);
-        if (tweets.length == 0 || !next) {
+        if (!next) {
+            repliesAll = [...repliesAll, ...tweets];
+            loop = false;
+            break;
+        }
+        if (tweets.length == 0) {
             loop = false;
             break;
         }

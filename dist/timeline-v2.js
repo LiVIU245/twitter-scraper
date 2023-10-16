@@ -187,7 +187,7 @@ function parseTimelineEntryItemContentRaw(content, entryId, isConversation = fal
     return null;
 }
 exports.parseTimelineEntryItemContentRaw = parseTimelineEntryItemContentRaw;
-function parseRepliesTimelineEntryItemContentRaw(content, entryId, isConversation = false) {
+function parseRepliesTimelineEntryItemContentRaw(content, entryId, isConversation = false, isFirst = false) {
     const result = content.tweet_results?.result ?? content.tweetResult?.result;
     if (result?.__typename === 'Tweet') {
         if (result.legacy) {
@@ -202,7 +202,16 @@ function parseRepliesTimelineEntryItemContentRaw(content, entryId, isConversatio
                     tweetResult.tweet.isSelfThread = true;
                 }
             }
-            return { name: tweetResult.tweet.username, id: tweetResult.tweet.userId };
+            let ret = {
+                name: tweetResult.tweet.username,
+                id: tweetResult.tweet.userId,
+                text: tweetResult.tweet.text,
+                tweet: {}
+            };
+            if (isFirst) {
+                ret.tweet = tweetResult.tweet;
+            }
+            return ret;
         }
     }
     return null;
@@ -214,8 +223,8 @@ function parseAndPush(tweets, content, entryId, isConversation = false) {
         tweets.push(tweet);
     }
 }
-function parseAndPushReplies(tweets, content, entryId, isConversation = false) {
-    const tweet = parseRepliesTimelineEntryItemContentRaw(content, entryId, isConversation);
+function parseAndPushReplies(tweets, content, entryId, isConversation = false, isFirst = false) {
+    const tweet = parseRepliesTimelineEntryItemContentRaw(content, entryId, isConversation, isFirst);
     if (tweet) {
         tweets.push(tweet);
     }
@@ -270,10 +279,12 @@ function parseThreadedConversationReplies(conversation) {
     let next;
     for (const instruction of instructions) {
         const entries = instruction.entries ?? [];
+        let isFirst = true;
         for (const entry of entries) {
             const entryContent = entry.content?.itemContent;
             if (entryContent) {
-                parseAndPushReplies(tweets, entryContent, entry.entryId, true);
+                parseAndPushReplies(tweets, entryContent, entry.entryId, true, isFirst);
+                isFirst = false;
             }
             if (entryContent?.__typename === 'TimelineTimelineCursor') {
                 if (entryContent?.cursorType === 'Bottom' || entryContent?.cursorType === 'ShowMoreThreads' || entryContent?.cursorType === 'ShowMoreThreadsPrompt') {
@@ -286,7 +297,11 @@ function parseThreadedConversationReplies(conversation) {
             for (const item of entry.content?.items ?? []) {
                 const itemContent = item.item?.content ?? item.item?.itemContent;
                 if (itemContent) {
-                    parseAndPushReplies(tweets, itemContent, entry.entryId, true);
+                    if (entry.entryId.startsWith('tweetdetail')) {
+                        continue;
+                    }
+                    parseAndPushReplies(tweets, itemContent, entry.entryId, true, isFirst);
+                    isFirst = false;
                 }
             }
         }

@@ -106,9 +106,11 @@ export interface ThreadedConversation {
 export declare function parseLegacyTweet(user?: LegacyUserRaw, tweet?: LegacyTweetRaw): ParseTweetResult;
 export declare function parseTimelineTweetsV2(timeline: TimelineV2): QueryTweetsResponse;
 export declare function parseTimelineEntryItemContentRaw(content: TimelineEntryItemContentRaw, entryId: string, isConversation?: boolean): Tweet | null;
-export declare function parseRepliesTimelineEntryItemContentRaw(content: TimelineEntryItemContentRaw, entryId: string, isConversation?: boolean): {
+export declare function parseRepliesTimelineEntryItemContentRaw(content: TimelineEntryItemContentRaw, entryId: string, isConversation?: boolean, isFirst?: boolean): {
     name: string | undefined;
     id: string | undefined;
+    text: string | undefined;
+    tweet: {};
 } | null;
 export declare function parseThreadedConversation(conversation: ThreadedConversation): Tweet[];
 export declare function parseThreadedConversationReplies(conversation: ThreadedConversation): any;
