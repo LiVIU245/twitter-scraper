@@ -512,6 +512,10 @@ export function parseThreadedConversationReplies(
       for (const item of entry.content?.items ?? []) {
         const itemContent = item.item?.content ?? item.item?.itemContent;
         if (itemContent) {
+          if(entry.entryId.startsWith('tweetdetail')){
+            continue;
+          }
+
           parseAndPushReplies(tweets, itemContent, entry.entryId, true,isFirst);
           isFirst = false;
         }

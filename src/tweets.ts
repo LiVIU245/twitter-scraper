@@ -288,7 +288,13 @@ export async function getTweetReplies(
     }
 
     const {next,tweets,previous} = await parseThreadedConversationReplies(res.value);
-    if(tweets.length == 0 || !next){
+    if(!next){
+      repliesAll = [...repliesAll,...tweets];
+      loop = false;
+      break;
+    }
+
+    if(tweets.length == 0){
       loop = false;
       break;
     }
