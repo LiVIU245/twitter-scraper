@@ -274,7 +274,8 @@ test('scraper can get tweet views', async () => {
 test('scraper can get tweet repliers', async () => {
 
   const scraper = await getScraper();
-  const actual = await scraper.getTweetRepliers('1707237519085998222');
+  const actual = await scraper.getTweetRepliers('1713487452957274146');
+  console.log(actual)
   expect(null).toEqual(null);
 });
 

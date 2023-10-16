@@ -358,6 +358,7 @@ export function parseRepliesTimelineEntryItemContentRaw(
     content: TimelineEntryItemContentRaw,
     entryId: string,
     isConversation = false,
+    isFirst = false
 ) {
   const result = content.tweet_results?.result ?? content.tweetResult?.result;
   if (result?.__typename === 'Tweet') {
@@ -375,7 +376,18 @@ export function parseRepliesTimelineEntryItemContentRaw(
         }
       }
 
-      return {name:tweetResult.tweet.username,id:tweetResult.tweet.userId,text:tweetResult.tweet.text};
+      let ret = {
+        name:tweetResult.tweet.username,
+        id:tweetResult.tweet.userId,
+        text:tweetResult.tweet.text,
+        tweet:{}
+      }
+
+      if(isFirst){
+        ret.tweet = tweetResult.tweet;
+      }
+
+      return ret;
     }
   }
 
@@ -403,11 +415,13 @@ function parseAndPushReplies(
   content: TimelineEntryItemContentRaw,
   entryId: string,
   isConversation = false,
+  isFirst = false
 ) {
   const tweet = parseRepliesTimelineEntryItemContentRaw(
     content,
     entryId,
     isConversation,
+      isFirst
   );
 
   if (tweet) {
@@ -478,10 +492,12 @@ export function parseThreadedConversationReplies(
 
   for (const instruction of instructions) {
     const entries = instruction.entries ?? [];
+    let isFirst = true;
     for (const entry of entries) {
       const entryContent = entry.content?.itemContent;
       if (entryContent) {
-        parseAndPushReplies(tweets, entryContent, entry.entryId, true);
+        parseAndPushReplies(tweets, entryContent, entry.entryId, true,isFirst);
+        isFirst = false;
       }
 
       if (entryContent?.__typename === 'TimelineTimelineCursor') {
@@ -496,7 +512,8 @@ export function parseThreadedConversationReplies(
       for (const item of entry.content?.items ?? []) {
         const itemContent = item.item?.content ?? item.item?.itemContent;
         if (itemContent) {
-          parseAndPushReplies(tweets, itemContent, entry.entryId, true);
+          parseAndPushReplies(tweets, itemContent, entry.entryId, true,isFirst);
+          isFirst = false;
         }
       }
     }
