@@ -25,7 +25,7 @@ export interface ScraperOptions {
 export declare class Scraper {
     private readonly options?;
     private auth;
-    private authTrends;
+    private pointer;
     private token;
     /**
      * Creates a new Scraper object.
@@ -33,6 +33,7 @@ export declare class Scraper {
      * - Reusing Scraper objects is recommended to minimize the time spent authenticating unnecessarily.
      */
     constructor(options?: Partial<ScraperOptions> | undefined);
+    private getAuth;
     /**
      * Fetches a Twitter profile.
      * @param username The Twitter username of the profile to fetch, without an `@` at the beginning.
@@ -214,12 +215,12 @@ export declare class Scraper {
     /**
      * Log out of Twitter.
      */
-    logout(): Promise<void>;
+    logout(index: number): Promise<void>;
     /**
      * Retrieves all cookies for the current session.
      * @returns All cookies for the current session.
      */
-    getCookies(): Promise<Cookie[]>;
+    getCookies(index: number): Promise<Cookie[]>;
     /**
      * Set cookies for the current session.
      * @param cookies The cookies to set for the current session.
@@ -228,7 +229,7 @@ export declare class Scraper {
     /**
      * Clear all cookies for the current session.
      */
-    clearCookies(): Promise<void>;
+    clearCookies(index: number): Promise<void>;
     /**
      * Sets the optional cookie to be used in requests.
      * @param _cookie The cookie to be used in requests.

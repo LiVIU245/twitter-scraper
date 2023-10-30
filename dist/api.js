@@ -46,7 +46,7 @@ async function requestApi(url, auth, method = 'GET') {
                 const currentTime = new Date().valueOf() / 1000;
                 const timeDeltaMs = 1000 * (parseInt(xRateLimitReset) - currentTime);
                 // I have seen this block for 800s (~13 *minutes*)
-                await new Promise((resolve) => setTimeout(resolve, timeDeltaMs));
+                // await new Promise((resolve) => setTimeout(resolve, timeDeltaMs));
             }
         }
     } while (res.status === 429);

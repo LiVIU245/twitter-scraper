@@ -24,8 +24,9 @@ class Scraper {
      */
     constructor(options) {
         this.options = options;
+        this.auth = [];
+        this.pointer = 0;
         this.token = api_1.bearerToken;
-        this.useGuestAuth();
     }
     /**
      * Initializes auth properties using a guest token.
@@ -33,8 +34,12 @@ class Scraper {
      * @internal
      */
     useGuestAuth() {
-        this.auth = new auth_1.TwitterGuestAuth(this.token, this.getAuthOptions());
-        this.authTrends = new auth_1.TwitterGuestAuth(this.token, this.getAuthOptions());
+        this.auth.push(new auth_1.TwitterGuestAuth(this.token, this.getAuthOptions()));
+    }
+    getAuth() {
+        let auth = this.auth[this.pointer];
+        this.pointer = (this.pointer + 1) % this.auth.length;
+        return auth;
     }
     /**
      * Fetches a Twitter profile.
@@ -42,7 +47,7 @@ class Scraper {
      * @returns The requested {@link Profile}.
      */
     async getProfile(username) {
-        const res = await (0, profile_1.getProfile)(username, this.auth);
+        const res = await (0, profile_1.getProfile)(username, this.getAuth());
         return this.handleResponse(res);
     }
     /**
@@ -51,7 +56,7 @@ class Scraper {
      * @returns The ID of the corresponding account.
      */
     async getUserIdByScreenName(screenName) {
-        const res = await (0, profile_1.getUserIdByScreenName)(screenName, this.auth);
+        const res = await (0, profile_1.getUserIdByScreenName)(screenName, this.getAuth());
         return this.handleResponse(res);
     }
     /**
@@ -63,7 +68,7 @@ class Scraper {
      * @returns An {@link AsyncGenerator} of tweets matching the provided filters.
      */
     searchTweets(query, maxTweets, searchMode = search_1.SearchMode.Top) {
-        return (0, search_1.searchTweets)(query, maxTweets, searchMode, this.auth);
+        return (0, search_1.searchTweets)(query, maxTweets, searchMode, this.getAuth());
     }
     /**
      * Fetches profiles from Twitter.
@@ -72,7 +77,7 @@ class Scraper {
      * @returns An {@link AsyncGenerator} of tweets matching the provided filter(s).
      */
     searchProfiles(query, maxProfiles) {
-        return (0, search_1.searchProfiles)(query, maxProfiles, this.auth);
+        return (0, search_1.searchProfiles)(query, maxProfiles, this.getAuth());
     }
     /**
      * Fetches tweets from Twitter.
@@ -84,7 +89,7 @@ class Scraper {
      * @returns A page of results, containing a cursor that can be used in further requests.
      */
     fetchSearchTweets(query, maxTweets, searchMode, cursor) {
-        return (0, search_1.fetchSearchTweets)(query, maxTweets, searchMode, this.auth, cursor);
+        return (0, search_1.fetchSearchTweets)(query, maxTweets, searchMode, this.getAuth(), cursor);
     }
     /**
      * Fetches profiles from Twitter.
@@ -94,7 +99,7 @@ class Scraper {
      * @returns A page of results, containing a cursor that can be used in further requests.
      */
     fetchSearchProfiles(query, maxProfiles, cursor) {
-        return (0, search_1.fetchSearchProfiles)(query, maxProfiles, this.auth, cursor);
+        return (0, search_1.fetchSearchProfiles)(query, maxProfiles, this.getAuth(), cursor);
     }
     /**
      * Fetch the profiles a user is following
@@ -103,7 +108,7 @@ class Scraper {
      * @returns An {@link AsyncGenerator} of following profiles for the provided user.
      */
     getFollowing(userId, maxProfiles) {
-        return (0, relationships_1.getFollowing)(userId, maxProfiles, this.auth);
+        return (0, relationships_1.getFollowing)(userId, maxProfiles, this.getAuth());
     }
     /**
      * Fetch the profiles that follow a user
@@ -112,7 +117,7 @@ class Scraper {
      * @returns An {@link AsyncGenerator} of profiles following the provided user.
      */
     getFollowers(userId, maxProfiles) {
-        return (0, relationships_1.getFollowers)(userId, maxProfiles, this.auth);
+        return (0, relationships_1.getFollowers)(userId, maxProfiles, this.getAuth());
     }
     /**
      * Fetches following profiles from Twitter.
@@ -122,7 +127,7 @@ class Scraper {
      * @returns A page of results, containing a cursor that can be used in further requests.
      */
     fetchProfileFollowing(userId, maxProfiles, cursor) {
-        return (0, relationships_1.fetchProfileFollowing)(userId, maxProfiles, this.auth, cursor);
+        return (0, relationships_1.fetchProfileFollowing)(userId, maxProfiles, this.getAuth(), cursor);
     }
     /**
      * Fetches profile followers from Twitter.
@@ -132,14 +137,14 @@ class Scraper {
      * @returns A page of results, containing a cursor that can be used in further requests.
      */
     fetchProfileFollowers(userId, maxProfiles, cursor) {
-        return (0, relationships_1.fetchProfileFollowers)(userId, maxProfiles, this.auth, cursor);
+        return (0, relationships_1.fetchProfileFollowers)(userId, maxProfiles, this.getAuth(), cursor);
     }
     /**
      * Fetches the current trends from Twitter.
      * @returns The current list of trends.
      */
     getTrends() {
-        return (0, trends_1.getTrends)(this.authTrends);
+        return (0, trends_1.getTrends)(this.getAuth());
     }
     /**
      * Fetches tweets from a Twitter user.
@@ -148,7 +153,7 @@ class Scraper {
      * @returns An {@link AsyncGenerator} of tweets from the provided user.
      */
     getTweets(user, maxTweets = 200) {
-        return (0, tweets_1.getTweets)(user, maxTweets, this.auth);
+        return (0, tweets_1.getTweets)(user, maxTweets, this.getAuth());
     }
     /**
      * Fetches tweets from a Twitter user using their ID.
@@ -157,7 +162,7 @@ class Scraper {
      * @returns An {@link AsyncGenerator} of tweets from the provided user.
      */
     getTweetsByUserId(userId, maxTweets = 200) {
-        return (0, tweets_1.getTweetsByUserId)(userId, maxTweets, this.auth);
+        return (0, tweets_1.getTweetsByUserId)(userId, maxTweets, this.getAuth());
     }
     /**
      * Fetches the first tweet matching the given query.
@@ -204,7 +209,7 @@ class Scraper {
      * @returns The {@link Tweet} object or `null`/`undefined` if it couldn't be fetched.
      */
     getLatestTweet(user, includeRetweets = false, max = 200) {
-        return (0, tweets_1.getLatestTweet)(user, includeRetweets, max, this.auth);
+        return (0, tweets_1.getLatestTweet)(user, includeRetweets, max, this.getAuth());
     }
     /**
      * Fetches a single tweet.
@@ -212,12 +217,7 @@ class Scraper {
      * @returns The {@link Tweet} object, or `null` if it couldn't be fetched.
      */
     getTweet(id) {
-        if (this.auth instanceof auth_user_1.TwitterUserAuth) {
-            return (0, tweets_1.getTweet)(id, this.auth);
-        }
-        else {
-            return (0, tweets_1.getTweetAnonymous)(id, this.auth);
-        }
+        return (0, tweets_1.getTweet)(id, this.getAuth());
     }
     /**
      * Fetches a single tweet.
@@ -225,7 +225,7 @@ class Scraper {
      * @returns The {@link Tweet} object, or `null` if it couldn't be fetched.
      */
     getTweetRepliers(id) {
-        return (0, tweets_1.getTweetReplies)(id, this.auth);
+        return (0, tweets_1.getTweetReplies)(id, this.getAuth());
     }
     /**
      * Fetches a list of a tweet's retweet.
@@ -233,7 +233,7 @@ class Scraper {
      * @returns The {@link Tweet} object, or `null` if it couldn't be fetched.
      */
     getRetweets(id) {
-        return (0, retweets_1.getRetweets)(id, this.auth);
+        return (0, retweets_1.getRetweets)(id, this.getAuth());
     }
     /**
      * Fetches a list of a tweet's retweet.
@@ -241,21 +241,21 @@ class Scraper {
      * @returns The {@link Tweet} object, or `null` if it couldn't be fetched.
      */
     getFavoriters(id) {
-        return (0, favoriters_1.getFavoriters)(id, this.auth);
+        return (0, favoriters_1.getFavoriters)(id, this.getAuth());
     }
     /**
      * Returns if the scraper has a guest token. The token may not be valid.
      * @returns `true` if the scraper has a guest token; otherwise `false`.
      */
     hasGuestToken() {
-        return this.auth.hasToken() || this.authTrends.hasToken();
+        return this.getAuth().hasToken();
     }
     /**
      * Returns if the scraper is logged in as a real user.
      * @returns `true` if the scraper is logged in with a real user account; otherwise `false`.
      */
     async isLoggedIn() {
-        return ((await this.auth.isLoggedIn()) && (await this.authTrends.isLoggedIn()));
+        return ((await this.getAuth().isLoggedIn()));
     }
     /**
      * Login to Twitter as a real Twitter account. This enables running
@@ -268,15 +268,13 @@ class Scraper {
         // Swap in a real authorizer for all requests
         const userAuth = new auth_user_1.TwitterUserAuth(this.token, this.getAuthOptions());
         await userAuth.login(username, password, email);
-        this.auth = userAuth;
-        this.authTrends = userAuth;
+        this.auth.push(userAuth);
     }
     /**
      * Log out of Twitter.
      */
-    async logout() {
-        await this.auth.logout();
-        await this.authTrends.logout();
+    async logout(index) {
+        await this.auth[index].logout();
         // Swap in guest authorizers for all requests
         this.useGuestAuth();
     }
@@ -284,8 +282,8 @@ class Scraper {
      * Retrieves all cookies for the current session.
      * @returns All cookies for the current session.
      */
-    async getCookies() {
-        return await this.authTrends.cookieJar().getCookies(twUrl);
+    async getCookies(index) {
+        return await this.auth[index].cookieJar().getCookies(twUrl);
     }
     /**
      * Set cookies for the current session.
@@ -296,15 +294,13 @@ class Scraper {
         for (const cookie of cookies) {
             await userAuth.cookieJar().setCookie(cookie, twUrl);
         }
-        this.auth = userAuth;
-        this.authTrends = userAuth;
+        this.auth.push(userAuth);
     }
     /**
      * Clear all cookies for the current session.
      */
-    async clearCookies() {
-        await this.auth.cookieJar().removeAllCookies();
-        await this.authTrends.cookieJar().removeAllCookies();
+    async clearCookies(index) {
+        await this.auth[index].cookieJar().removeAllCookies();
     }
     /**
      * Sets the optional cookie to be used in requests.

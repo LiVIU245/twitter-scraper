@@ -87,7 +87,7 @@ export async function requestApi<T>(
         const timeDeltaMs = 1000 * (parseInt(xRateLimitReset) - currentTime);
 
         // I have seen this block for 800s (~13 *minutes*)
-        await new Promise((resolve) => setTimeout(resolve, timeDeltaMs));
+        // await new Promise((resolve) => setTimeout(resolve, timeDeltaMs));
       }
     }
   } while (res.status === 429);
