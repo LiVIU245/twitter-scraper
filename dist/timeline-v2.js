@@ -206,11 +206,8 @@ function parseRepliesTimelineEntryItemContentRaw(content, entryId, isConversatio
                 name: tweetResult.tweet.username,
                 id: tweetResult.tweet.userId,
                 text: tweetResult.tweet.text,
-                tweet: {}
+                tweet: tweetResult.tweet
             };
-            if (isFirst) {
-                ret.tweet = tweetResult.tweet;
-            }
             return ret;
         }
     }

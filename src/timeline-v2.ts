@@ -380,11 +380,7 @@ export function parseRepliesTimelineEntryItemContentRaw(
         name:tweetResult.tweet.username,
         id:tweetResult.tweet.userId,
         text:tweetResult.tweet.text,
-        tweet:{}
-      }
-
-      if(isFirst){
-        ret.tweet = tweetResult.tweet;
+        tweet:tweetResult.tweet
       }
 
       return ret;

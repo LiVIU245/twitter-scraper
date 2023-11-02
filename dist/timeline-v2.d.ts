@@ -110,7 +110,7 @@ export declare function parseRepliesTimelineEntryItemContentRaw(content: Timelin
     name: string | undefined;
     id: string | undefined;
     text: string | undefined;
-    tweet: {};
+    tweet: Tweet;
 } | null;
 export declare function parseThreadedConversation(conversation: ThreadedConversation): Tweet[];
 export declare function parseThreadedConversationReplies(conversation: ThreadedConversation): any;
