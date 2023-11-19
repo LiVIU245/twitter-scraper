@@ -134,7 +134,7 @@ async function getTweetReplies(id, auth) {
         cursor = next;
         repliesAll = [...repliesAll, ...tweets];
     }
-    repliesAll = repliesAll.filter((v, i, a) => a.findIndex(t => (t.id === v.id)) === i);
+    repliesAll = repliesAll.filter((v, i, a) => v.tweet.isSelfThread || a.findIndex(t => (t.id === v.id && !t.tweet.isSelfThread)) === i);
     return repliesAll;
 }
 exports.getTweetReplies = getTweetReplies;

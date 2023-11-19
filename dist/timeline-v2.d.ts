@@ -106,7 +106,7 @@ export interface ThreadedConversation {
 export declare function parseLegacyTweet(user?: LegacyUserRaw, tweet?: LegacyTweetRaw): ParseTweetResult;
 export declare function parseTimelineTweetsV2(timeline: TimelineV2): QueryTweetsResponse;
 export declare function parseTimelineEntryItemContentRaw(content: TimelineEntryItemContentRaw, entryId: string, isConversation?: boolean): Tweet | null;
-export declare function parseRepliesTimelineEntryItemContentRaw(content: TimelineEntryItemContentRaw, entryId: string, isConversation?: boolean, isFirst?: boolean): {
+export declare function parseRepliesTimelineEntryItemContentRaw(content: TimelineEntryItemContentRaw, entryId: string, isConversation?: boolean): {
     name: string | undefined;
     id: string | undefined;
     text: string | undefined;

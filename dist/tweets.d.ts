@@ -9,6 +9,7 @@ export interface Mention {
 export interface Replier {
     id: string;
     name?: string;
+    tweet: Tweet;
 }
 export interface Photo {
     id: string;

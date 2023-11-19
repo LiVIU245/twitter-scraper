@@ -187,7 +187,7 @@ function parseTimelineEntryItemContentRaw(content, entryId, isConversation = fal
     return null;
 }
 exports.parseTimelineEntryItemContentRaw = parseTimelineEntryItemContentRaw;
-function parseRepliesTimelineEntryItemContentRaw(content, entryId, isConversation = false, isFirst = false) {
+function parseRepliesTimelineEntryItemContentRaw(content, entryId, isConversation = false) {
     const result = content.tweet_results?.result ?? content.tweetResult?.result;
     if (result?.__typename === 'Tweet') {
         if (result.legacy) {
@@ -220,8 +220,8 @@ function parseAndPush(tweets, content, entryId, isConversation = false) {
         tweets.push(tweet);
     }
 }
-function parseAndPushReplies(tweets, content, entryId, isConversation = false, isFirst = false) {
-    const tweet = parseRepliesTimelineEntryItemContentRaw(content, entryId, isConversation, isFirst);
+function parseAndPushReplies(tweets, content, entryId, isConversation = false) {
+    const tweet = parseRepliesTimelineEntryItemContentRaw(content, entryId, isConversation);
     if (tweet) {
         tweets.push(tweet);
     }
@@ -280,7 +280,7 @@ function parseThreadedConversationReplies(conversation) {
         for (const entry of entries) {
             const entryContent = entry.content?.itemContent;
             if (entryContent) {
-                parseAndPushReplies(tweets, entryContent, entry.entryId, true, isFirst);
+                parseAndPushReplies(tweets, entryContent, entry.entryId, true);
                 isFirst = false;
             }
             if (entryContent?.__typename === 'TimelineTimelineCursor') {
@@ -297,7 +297,7 @@ function parseThreadedConversationReplies(conversation) {
                     if (entry.entryId.startsWith('tweetdetail')) {
                         continue;
                     }
-                    parseAndPushReplies(tweets, itemContent, entry.entryId, true, isFirst);
+                    parseAndPushReplies(tweets, itemContent, entry.entryId, true);
                     isFirst = false;
                 }
             }
