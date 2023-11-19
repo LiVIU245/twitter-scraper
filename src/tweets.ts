@@ -23,6 +23,7 @@ export interface Mention {
 export interface Replier {
   id: string;
   name?: string;
+  tweet: Tweet;
 }
 
 export interface Photo {
@@ -303,7 +304,7 @@ export async function getTweetReplies(
     repliesAll = [...repliesAll,...tweets];
   }
 
-  repliesAll = repliesAll.filter((v,i,a)=>a.findIndex(t=>(t.id === v.id))===i)
+  repliesAll = repliesAll.filter((v,i,a)=>v.tweet.isSelfThread || a.findIndex(t=>(t.id === v.id && !t.tweet.isSelfThread))===i)
 
   return repliesAll;
 }

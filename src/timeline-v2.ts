@@ -358,7 +358,6 @@ export function parseRepliesTimelineEntryItemContentRaw(
     content: TimelineEntryItemContentRaw,
     entryId: string,
     isConversation = false,
-    isFirst = false
 ) {
   const result = content.tweet_results?.result ?? content.tweetResult?.result;
   if (result?.__typename === 'Tweet') {
@@ -411,13 +410,11 @@ function parseAndPushReplies(
   content: TimelineEntryItemContentRaw,
   entryId: string,
   isConversation = false,
-  isFirst = false
 ) {
   const tweet = parseRepliesTimelineEntryItemContentRaw(
     content,
     entryId,
     isConversation,
-      isFirst
   );
 
   if (tweet) {
@@ -492,7 +489,7 @@ export function parseThreadedConversationReplies(
     for (const entry of entries) {
       const entryContent = entry.content?.itemContent;
       if (entryContent) {
-        parseAndPushReplies(tweets, entryContent, entry.entryId, true,isFirst);
+        parseAndPushReplies(tweets, entryContent, entry.entryId, true);
         isFirst = false;
       }
 
@@ -512,7 +509,7 @@ export function parseThreadedConversationReplies(
             continue;
           }
 
-          parseAndPushReplies(tweets, itemContent, entry.entryId, true,isFirst);
+          parseAndPushReplies(tweets, itemContent, entry.entryId, true);
           isFirst = false;
         }
       }
