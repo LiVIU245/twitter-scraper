@@ -15,7 +15,7 @@ function parseProfile(user, isBlueVerified) {
         banner: user.profile_banner_url,
         biography: user.description,
         followersCount: user.followers_count,
-        followingCount: user.favourites_count,
+        followingCount: user.friends_count,
         friendsCount: user.friends_count,
         mediaCount: user.media_count,
         id: user.id_str,
