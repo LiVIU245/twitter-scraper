@@ -1,5 +1,5 @@
 import { Cookie } from 'tough-cookie';
-import { FetchTransformOptions, RequestApiResult } from './api';
+import { FetchTransformOptions } from './api';
 import { Profile } from './profile';
 import { SearchMode } from './search';
 import { QueryProfilesResponse, QueryTweetsResponse } from './timeline-v1';
@@ -200,7 +200,6 @@ export declare class Scraper {
      * @param authIndex The Index of the auth to use.
      * @returns The {@link Tweet} object, or `null` if it couldn't be fetched.
      */
-    sendDM(params: object, authIndex: number): Promise<RequestApiResult<any> | null>;
     /**
      * Returns if the scraper has a guest token. The token may not be valid.
      * @returns `true` if the scraper has a guest token; otherwise `false`.

@@ -352,9 +352,9 @@ export class Scraper {
    * @param authIndex The Index of the auth to use.
    * @returns The {@link Tweet} object, or `null` if it couldn't be fetched.
    */
-  public sendDM(params: object,authIndex: number): Promise<RequestApiResult<any> | null> {
-      return sendDM(params, this.auth[authIndex]);
-  }
+  // public sendDM(params: object,authIndex: number): Promise<RequestApiResult<any> | null> {
+  //     return sendDM(params, this.auth[authIndex]);
+  // }
 
   /**
    * Returns if the scraper has a guest token. The token may not be valid.

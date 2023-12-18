@@ -11,7 +11,6 @@ const trends_1 = require("./trends");
 const tweets_1 = require("./tweets");
 const retweets_1 = require("./retweets");
 const favoriters_1 = require("./favoriters");
-const messages_1 = require("./messages");
 const twUrl = 'https://twitter.com';
 /**
  * An interface to Twitter's undocumented API.
@@ -250,9 +249,9 @@ class Scraper {
      * @param authIndex The Index of the auth to use.
      * @returns The {@link Tweet} object, or `null` if it couldn't be fetched.
      */
-    sendDM(params, authIndex) {
-        return (0, messages_1.sendDM)(params, this.auth[authIndex]);
-    }
+    // public sendDM(params: object,authIndex: number): Promise<RequestApiResult<any> | null> {
+    //     return sendDM(params, this.auth[authIndex]);
+    // }
     /**
      * Returns if the scraper has a guest token. The token may not be valid.
      * @returns `true` if the scraper has a guest token; otherwise `false`.
