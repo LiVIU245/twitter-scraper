@@ -75,7 +75,7 @@ async function getProfile(username, auth) {
             err: new Error(errors[0].message),
         };
     }
-    if (value.data.user.result == null) {
+    if (value.data.user == null) {
         return {
             success: false,
             err: new Error('User not found.'),
