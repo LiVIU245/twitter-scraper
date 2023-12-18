@@ -87,10 +87,11 @@ export class Scraper {
   /**
    * Fetches a Twitter profile.
    * @param username The Twitter username of the profile to fetch, without an `@` at the beginning.
+   * @param authIndex Index of the auth.
    * @returns The requested {@link Profile}.
    */
-  public async getProfile(username: string): Promise<Profile> {
-    const res = await getProfile(username, this.getAuth());
+  public async getProfile(username: string,authIndex: number): Promise<Profile> {
+    const res = await getProfile(username, this.auth[authIndex]);
     return this.handleResponse(res);
   }
 

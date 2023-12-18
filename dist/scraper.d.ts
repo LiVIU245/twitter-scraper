@@ -37,9 +37,10 @@ export declare class Scraper {
     /**
      * Fetches a Twitter profile.
      * @param username The Twitter username of the profile to fetch, without an `@` at the beginning.
+     * @param authIndex Index of the auth.
      * @returns The requested {@link Profile}.
      */
-    getProfile(username: string): Promise<Profile>;
+    getProfile(username: string, authIndex: number): Promise<Profile>;
     /**
      * Fetches the user ID corresponding to the provided screen name.
      * @param screenName The Twitter screen name of the profile to fetch.
