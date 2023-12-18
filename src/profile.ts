@@ -175,7 +175,7 @@ export async function getProfile(
     };
   }
 
-  if(value.data.user.result == null){
+  if(value.data.user == null){
     return {
       success: false,
       err: new Error('User not found.'),
