@@ -4,6 +4,8 @@ import { TwitterAuth } from './auth';
 import { TwitterApiErrorRaw } from './errors';
 
 export interface LegacyUserRaw {
+  followed_by: boolean;
+  can_dm: boolean;
   created_at?: string;
   description?: string;
   entities?: {
@@ -48,6 +50,7 @@ export interface Profile {
   friendsCount?: number;
   mediaCount?: number;
   statusesCount?: number;
+  id?: string;
   isPrivate?: boolean;
   isVerified?: boolean;
   isBlueVerified?: boolean;
@@ -62,6 +65,8 @@ export interface Profile {
   userId?: string;
   username?: string;
   website?: string;
+  followedBy?: boolean;
+  canDm?: boolean;
 }
 
 export interface UserRaw {
@@ -86,13 +91,14 @@ export function parseProfile(
   isBlueVerified?: boolean,
 ): Profile {
   const profile: Profile = {
-    avatar: getAvatarOriginalSizeUrl(user.profile_image_url_https),
+    avatar: user.profile_image_url_https,
     banner: user.profile_banner_url,
     biography: user.description,
     followersCount: user.followers_count,
     followingCount: user.favourites_count,
     friendsCount: user.friends_count,
     mediaCount: user.media_count,
+    id: user.id_str,
     isPrivate: user.protected ?? false,
     isVerified: user.verified,
     likesCount: user.favourites_count,
@@ -105,6 +111,8 @@ export function parseProfile(
     userId: user.id_str,
     username: user.screen_name,
     isBlueVerified: isBlueVerified ?? false,
+    canDm: user.can_dm,
+    followedBy: user.followed_by,
   };
 
   if (user.created_at != null) {

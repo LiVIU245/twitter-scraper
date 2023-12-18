@@ -11,16 +11,21 @@ exports.bearerToken = 'AAAAAAAAAAAAAAAAAAAAAFQODgEAAAAAVHTp76lzh3rFzcHbmHVvQxYYp
  * @param url - The URL to send the request to.
  * @param auth - The instance of {@link TwitterAuth} that will be used to authorize this request.
  * @param method - The HTTP method used when sending this request.
+ * @param body - The request payload.
  */
-async function requestApi(url, auth, method = 'GET') {
+async function requestApi(url, auth, method = 'GET', body) {
     const headers = new headers_polyfill_1.Headers();
     await auth.installTo(headers, url);
+    if (method == 'POST') {
+        headers.set('Content-Type', 'application/json');
+    }
     let res;
     do {
         try {
             res = await auth.fetch(url, {
                 method,
                 headers,
+                body: JSON.stringify(body),
             });
         }
         catch (err) {

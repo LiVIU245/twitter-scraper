@@ -11,6 +11,7 @@ const trends_1 = require("./trends");
 const tweets_1 = require("./tweets");
 const retweets_1 = require("./retweets");
 const favoriters_1 = require("./favoriters");
+const messages_1 = require("./messages");
 const twUrl = 'https://twitter.com';
 /**
  * An interface to Twitter's undocumented API.
@@ -242,6 +243,14 @@ class Scraper {
      */
     getFavoriters(id) {
         return (0, favoriters_1.getFavoriters)(id, this.getAuth());
+    }
+    /**
+     * Fetches a list of a tweet's retweet.
+     * @param params The ID of the tweet to fetch retweets.
+     * @returns The {@link Tweet} object, or `null` if it couldn't be fetched.
+     */
+    sendDM(params) {
+        return (0, messages_1.sendDM)(params, this.getAuth());
     }
     /**
      * Returns if the scraper has a guest token. The token may not be valid.

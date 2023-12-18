@@ -11,13 +11,14 @@ function getAvatarOriginalSizeUrl(avatarUrl) {
 }
 function parseProfile(user, isBlueVerified) {
     const profile = {
-        avatar: getAvatarOriginalSizeUrl(user.profile_image_url_https),
+        avatar: user.profile_image_url_https,
         banner: user.profile_banner_url,
         biography: user.description,
         followersCount: user.followers_count,
         followingCount: user.favourites_count,
         friendsCount: user.friends_count,
         mediaCount: user.media_count,
+        id: user.id_str,
         isPrivate: user.protected ?? false,
         isVerified: user.verified,
         likesCount: user.favourites_count,
@@ -30,6 +31,8 @@ function parseProfile(user, isBlueVerified) {
         userId: user.id_str,
         username: user.screen_name,
         isBlueVerified: isBlueVerified ?? false,
+        canDm: user.can_dm,
+        followedBy: user.followed_by,
     };
     if (user.created_at != null) {
         profile.joined = new Date(Date.parse(user.created_at));

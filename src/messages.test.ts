@@ -1,8 +1,8 @@
 import { getScraper } from './test-utils';
 
-test('scraper can get favoriters', async () => {
+test('scraper can send messages', async () => {
   const scraper = await getScraper();
-  const favs = await scraper.getFavoriters('1729485129326686699');
-
+  const message = await scraper.sendDM({});
+  console.log(message)
   await expect(null).toEqual(null);
 });

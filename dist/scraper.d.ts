@@ -1,5 +1,5 @@
 import { Cookie } from 'tough-cookie';
-import { FetchTransformOptions } from './api';
+import { FetchTransformOptions, RequestApiResult } from './api';
 import { Profile } from './profile';
 import { SearchMode } from './search';
 import { QueryProfilesResponse, QueryTweetsResponse } from './timeline-v1';
@@ -194,6 +194,12 @@ export declare class Scraper {
      * @returns The {@link Tweet} object, or `null` if it couldn't be fetched.
      */
     getFavoriters(id: string): Promise<Retweet[] | null>;
+    /**
+     * Fetches a list of a tweet's retweet.
+     * @param params The ID of the tweet to fetch retweets.
+     * @returns The {@link Tweet} object, or `null` if it couldn't be fetched.
+     */
+    sendDM(params: object): Promise<RequestApiResult<any> | null>;
     /**
      * Returns if the scraper has a guest token. The token may not be valid.
      * @returns `true` if the scraper has a guest token; otherwise `false`.

@@ -44,21 +44,28 @@ export type RequestApiResult<T> =
  * @param url - The URL to send the request to.
  * @param auth - The instance of {@link TwitterAuth} that will be used to authorize this request.
  * @param method - The HTTP method used when sending this request.
+ * @param body - The request payload.
  */
 export async function requestApi<T>(
   url: string,
   auth: TwitterAuth,
   method: 'GET' | 'POST' = 'GET',
+  body?: object,
 ): Promise<RequestApiResult<T>> {
   const headers = new Headers();
   await auth.installTo(headers, url);
+  if(method == 'POST'){
+    headers.set('Content-Type', 'application/json');
+  }
 
   let res: Response;
   do {
+
     try {
       res = await auth.fetch(url, {
         method,
         headers,
+        body: JSON.stringify(body),
       });
     } catch (err) {
       if (!(err instanceof Error)) {

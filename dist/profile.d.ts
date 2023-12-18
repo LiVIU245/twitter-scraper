@@ -2,6 +2,8 @@ import { RequestApiResult } from './api';
 import { TwitterAuth } from './auth';
 import { TwitterApiErrorRaw } from './errors';
 export interface LegacyUserRaw {
+    followed_by: boolean;
+    can_dm: boolean;
     created_at?: string;
     description?: string;
     entities?: {
@@ -45,6 +47,7 @@ export interface Profile {
     friendsCount?: number;
     mediaCount?: number;
     statusesCount?: number;
+    id?: string;
     isPrivate?: boolean;
     isVerified?: boolean;
     isBlueVerified?: boolean;
@@ -59,6 +62,8 @@ export interface Profile {
     userId?: string;
     username?: string;
     website?: string;
+    followedBy?: boolean;
+    canDm?: boolean;
 }
 export interface UserRaw {
     data: {

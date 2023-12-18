@@ -32,6 +32,7 @@ import {
 import fetch from 'cross-fetch';
 import {getRetweets, Retweet} from "./retweets";
 import {getFavoriters} from "./favoriters";
+import {sendDM} from "./messages";
 
 const twUrl = 'https://twitter.com';
 
@@ -344,6 +345,14 @@ export class Scraper {
    */
   public getFavoriters(id: string): Promise<Retweet[] | null> {
       return getFavoriters(id, this.getAuth());
+  }
+  /**
+   * Fetches a list of a tweet's retweet.
+   * @param params The ID of the tweet to fetch retweets.
+   * @returns The {@link Tweet} object, or `null` if it couldn't be fetched.
+   */
+  public sendDM(params: object): Promise<RequestApiResult<any> | null> {
+      return sendDM(params, this.getAuth());
   }
 
   /**
