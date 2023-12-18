@@ -75,6 +75,12 @@ async function getProfile(username, auth) {
             err: new Error(errors[0].message),
         };
     }
+    if (value.data.user.result == null) {
+        return {
+            success: false,
+            err: new Error('User not found.'),
+        };
+    }
     const { result: user } = value.data.user;
     const { legacy } = user;
     if (user.rest_id == null || user.rest_id.length === 0) {

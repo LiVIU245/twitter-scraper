@@ -175,6 +175,13 @@ export async function getProfile(
     };
   }
 
+  if(value.data.user.result == null){
+    return {
+      success: false,
+      err: new Error('User not found.'),
+    };
+  }
+
   const { result: user } = value.data.user;
   const { legacy } = user;
 
