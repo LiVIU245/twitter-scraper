@@ -247,10 +247,11 @@ class Scraper {
     /**
      * Fetches a list of a tweet's retweet.
      * @param params The ID of the tweet to fetch retweets.
+     * @param authIndex The Index of the auth to use.
      * @returns The {@link Tweet} object, or `null` if it couldn't be fetched.
      */
-    sendDM(params) {
-        return (0, messages_1.sendDM)(params, this.getAuth());
+    sendDM(params, authIndex) {
+        return (0, messages_1.sendDM)(params, this.auth[authIndex]);
     }
     /**
      * Returns if the scraper has a guest token. The token may not be valid.

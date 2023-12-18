@@ -197,9 +197,10 @@ export declare class Scraper {
     /**
      * Fetches a list of a tweet's retweet.
      * @param params The ID of the tweet to fetch retweets.
+     * @param authIndex The Index of the auth to use.
      * @returns The {@link Tweet} object, or `null` if it couldn't be fetched.
      */
-    sendDM(params: object): Promise<RequestApiResult<any> | null>;
+    sendDM(params: object, authIndex: number): Promise<RequestApiResult<any> | null>;
     /**
      * Returns if the scraper has a guest token. The token may not be valid.
      * @returns `true` if the scraper has a guest token; otherwise `false`.
