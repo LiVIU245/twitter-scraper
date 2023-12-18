@@ -349,10 +349,11 @@ export class Scraper {
   /**
    * Fetches a list of a tweet's retweet.
    * @param params The ID of the tweet to fetch retweets.
+   * @param authIndex The Index of the auth to use.
    * @returns The {@link Tweet} object, or `null` if it couldn't be fetched.
    */
-  public sendDM(params: object): Promise<RequestApiResult<any> | null> {
-      return sendDM(params, this.getAuth());
+  public sendDM(params: object,authIndex: number): Promise<RequestApiResult<any> | null> {
+      return sendDM(params, this.auth[authIndex]);
   }
 
   /**
