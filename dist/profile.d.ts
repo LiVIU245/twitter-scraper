@@ -72,6 +72,8 @@ export interface UserRaw {
                 rest_id?: string;
                 is_blue_verified?: boolean;
                 legacy: LegacyUserRaw;
+                __typename?: string;
+                message?: string;
             };
         };
     };

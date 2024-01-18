@@ -76,6 +76,8 @@ export interface UserRaw {
         rest_id?: string;
         is_blue_verified?: boolean;
         legacy: LegacyUserRaw;
+        __typename?: string;
+        message?: string;
       };
     };
   };
@@ -184,6 +186,13 @@ export async function getProfile(
 
   const { result: user } = value.data.user;
   const { legacy } = user;
+
+  if (user.__typename == 'UserUnavailable') {
+    return {
+      success: false,
+      err: new Error(user.message),
+    };
+  }
 
   if (user.rest_id == null || user.rest_id.length === 0) {
     return {

@@ -83,6 +83,12 @@ async function getProfile(username, auth) {
     }
     const { result: user } = value.data.user;
     const { legacy } = user;
+    if (user.__typename == 'UserUnavailable') {
+        return {
+            success: false,
+            err: new Error(user.message),
+        };
+    }
     if (user.rest_id == null || user.rest_id.length === 0) {
         return {
             success: false,
