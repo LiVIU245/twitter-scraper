@@ -303,8 +303,6 @@ export async function getTweetReplies(
     repliesAll = [...repliesAll,...tweets];
   }
 
-  repliesAll = repliesAll.filter((v,i,a)=>v.tweet.isSelfThread || a.findIndex(t=>(t.id === v.id && !t.tweet.isSelfThread))===i)
-
   return repliesAll;
 }
 
