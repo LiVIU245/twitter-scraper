@@ -133,6 +133,9 @@ function parseResult(result) {
             tweetResult.tweet.quotedStatus = quotedTweetResult.tweet;
         }
     }
+    if (result?.edit_control) {
+        tweetResult.tweet.edit_tweet_ids = result.edit_control.edit_tweet_ids;
+    }
     return tweetResult;
 }
 function parseTimelineTweetsV2(timeline) {
@@ -175,6 +178,22 @@ function parseTimelineEntryItemContentRaw(content, entryId, isConversation = fal
                 .replace('tweet-', '');
         }
         const tweetResult = parseResult(result);
+        if (tweetResult.success) {
+            if (isConversation) {
+                if (content?.tweetDisplayType === 'SelfThread') {
+                    tweetResult.tweet.isSelfThread = true;
+                }
+            }
+            return tweetResult.tweet;
+        }
+    }
+    if (result?.__typename === 'TweetWithVisibilityResults') {
+        if (result.tweet?.legacy) {
+            result.tweet.legacy.id_str = entryId
+                .replace('conversation-', '')
+                .replace('tweet-', '');
+        }
+        const tweetResult = parseResult(result.tweet);
         if (tweetResult.success) {
             if (isConversation) {
                 if (content?.tweetDisplayType === 'SelfThread') {

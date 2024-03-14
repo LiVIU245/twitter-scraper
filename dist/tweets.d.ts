@@ -73,6 +73,7 @@ export interface Tweet {
     profileImageUrl?: string;
     next?: string;
     previous?: string;
+    edit_tweet_ids?: string[];
 }
 export interface TweetCursor {
     next?: string;

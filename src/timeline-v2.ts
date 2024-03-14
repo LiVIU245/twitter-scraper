@@ -286,6 +286,10 @@ function parseResult(result?: TimelineResultRaw): ParseTweetResult {
     }
   }
 
+  if(result?.edit_control){
+    tweetResult.tweet.edit_tweet_ids = result.edit_control.edit_tweet_ids;
+  }
+
   return tweetResult;
 }
 
@@ -332,6 +336,7 @@ export function parseTimelineEntryItemContentRaw(
   isConversation = false,
 ) {
   const result = content.tweet_results?.result ?? content.tweetResult?.result;
+
   if (result?.__typename === 'Tweet') {
     if (result.legacy) {
       result.legacy.id_str = entryId
@@ -340,6 +345,25 @@ export function parseTimelineEntryItemContentRaw(
     }
 
     const tweetResult = parseResult(result);
+    if (tweetResult.success) {
+      if (isConversation) {
+        if (content?.tweetDisplayType === 'SelfThread') {
+          tweetResult.tweet.isSelfThread = true;
+        }
+      }
+
+      return tweetResult.tweet;
+    }
+  }
+
+  if (result?.__typename === 'TweetWithVisibilityResults') {
+    if (result.tweet?.legacy) {
+      result.tweet.legacy.id_str = entryId
+        .replace('conversation-', '')
+        .replace('tweet-', '');
+    }
+
+    const tweetResult = parseResult(result.tweet);
     if (tweetResult.success) {
       if (isConversation) {
         if (content?.tweetDisplayType === 'SelfThread') {

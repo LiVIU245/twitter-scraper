@@ -78,6 +78,10 @@ export interface SearchResultRaw {
   legacy?: LegacyTweetRaw;
 }
 
+export interface EditControlRaw {
+  edit_tweet_ids?: string[];
+}
+
 export interface TimelineResultRaw {
   rest_id?: string;
   __typename?: string;
@@ -103,6 +107,8 @@ export interface TimelineResultRaw {
     result?: TimelineResultRaw;
   };
   legacy?: LegacyTweetRaw;
+  tweet?: TimelineResultRaw;
+  edit_control: EditControlRaw
 }
 
 export interface LegacyTweetRaw {
