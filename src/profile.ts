@@ -122,6 +122,14 @@ export interface UserRaw {
   data: {
     user: {
       result: {
+        dm_permissions?: {
+          can_dm: boolean;
+          can_dm_on_xchat: boolean;
+        };
+        relationship_perspectives?: {
+          followed_by: boolean;
+          following: boolean;
+        };
         __typename?: string;
         message?: string;
         reason?: string;
@@ -247,6 +255,8 @@ export async function getProfile(
   legacy.created_at ??= user.core?.created_at;
   legacy.location ??= user.location?.location;
   legacy.name ??= user.core?.name;
+  legacy.can_dm ??= user.dm_permissions?.can_dm || false;
+  legacy.followed_by ??= user.relationship_perspectives?.followed_by || false;
 
   if (legacy.screen_name == null || legacy.screen_name.length === 0) {
     return {

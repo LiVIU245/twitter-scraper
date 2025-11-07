@@ -1000,6 +1000,8 @@ async function getProfile(username, auth) {
   legacy.created_at ?? (legacy.created_at = user.core?.created_at);
   legacy.location ?? (legacy.location = user.location?.location);
   legacy.name ?? (legacy.name = user.core?.name);
+  legacy.can_dm ?? (legacy.can_dm = user.dm_permissions?.can_dm || false);
+  legacy.followed_by ?? (legacy.followed_by = user.relationship_perspectives?.followed_by || false);
   if (legacy.screen_name == null || legacy.screen_name.length === 0) {
     return {
       success: false,
