@@ -142,8 +142,10 @@
   resolved "https://registry.yarnpkg.com/@sinclair/typebox/-/typebox-0.32.35.tgz#41c04473509478df9895800018a3d3ae7d40fb3c"
   integrity sha512-Ul3YyOTU++to8cgNkttakC0dWvpERr6RYoHO2W47DLbFvrwBDJUY31B1sImH6JZSYc4Kt4PyHtoPNu+vL2r2dA==
 
-"@the-convocation/twitter-scraper@file:../..":
+"@the-convocation/twitter-scraper@^0.19.0":
   version "0.19.0"
+  resolved "https://registry.yarnpkg.com/@the-convocation/twitter-scraper/-/twitter-scraper-0.19.0.tgz#362596fbd1f47cfb46e12ed0b6101a2fdd18686c"
+  integrity sha512-fkXidRdmlbxa7j1Rf/Gul6UHnsluVGekZyWLzvfjhjWz0FzX6mh5XpYTBeR+8Fa0b9Mx/mxfFCXkF2X3hRMQgw==
   dependencies:
     "@sinclair/typebox" "^0.32.20"
     cross-fetch "^4.0.0-alpha.5"

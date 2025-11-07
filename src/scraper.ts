@@ -52,6 +52,7 @@ import {
   findDmConversationsByUserId,
   DmConversation,
 } from './direct-messages';
+import { cycleTLSFetch } from './cycletls-fetch';
 
 const twUrl = 'https://x.com';
 
@@ -80,6 +81,7 @@ export interface ScraperOptions {
  */
 export class Scraper {
   private auth: TwitterAuth[] = [];
+  private authTrends!: TwitterAuth;
   private pointer: number = 0;
   private token: string;
 
@@ -102,10 +104,11 @@ export class Scraper {
     subtaskId: string,
     subtaskHandler: FlowSubtaskHandler,
   ): void {
-    if (this.auth instanceof TwitterUserAuth) {
-      this.auth.registerSubtaskHandler(subtaskId, subtaskHandler);
+    for (const auth of this.auth) {
+      if (auth instanceof TwitterUserAuth) {
+        auth.registerSubtaskHandler(subtaskId, subtaskHandler);
+      }
     }
-
     if (this.authTrends instanceof TwitterUserAuth) {
       this.authTrends.registerSubtaskHandler(subtaskId, subtaskHandler);
     }
@@ -222,7 +225,7 @@ export class Scraper {
     maxTweets: number,
     cursor?: string,
   ): Promise<QueryTweetsResponse> {
-    return fetchListTweets(listId, maxTweets, cursor, this.auth);
+    return fetchListTweets(listId, maxTweets, cursor, this.getAuth());
   }
 
   /**
@@ -237,7 +240,7 @@ export class Scraper {
     maxTweets: number,
     cursor?: string,
   ): Promise<QueryTweetsResponse> {
-    return fetchLikedTweets(userId, maxTweets, cursor, this.auth);
+    return fetchLikedTweets(userId, maxTweets, cursor, this.getAuth());
   }
 
   /**
@@ -321,7 +324,7 @@ export class Scraper {
    * @returns An {@link AsyncGenerator} of liked tweets from the provided user.
    */
   public getLikedTweets(user: string, maxTweets = 200): AsyncGenerator<Tweet> {
-    return getLikedTweets(user, maxTweets, this.auth);
+    return getLikedTweets(user, maxTweets, this.getAuth());
   }
 
   /**
@@ -347,7 +350,7 @@ export class Scraper {
     user: string,
     maxTweets = 200,
   ): AsyncGenerator<Tweet> {
-    return getTweetsAndReplies(user, maxTweets, this.auth);
+    return getTweetsAndReplies(user, maxTweets, this.getAuth());
   }
 
   /**
@@ -360,7 +363,7 @@ export class Scraper {
     userId: string,
     maxTweets = 200,
   ): AsyncGenerator<Tweet, void> {
-    return getTweetsAndRepliesByUserId(userId, maxTweets, this.auth);
+    return getTweetsAndRepliesByUserId(userId, maxTweets, this.getAuth());
   }
 
   /**
@@ -472,7 +475,7 @@ export class Scraper {
    * @return A promise that resolves to an object representing the direct message inbox.
    */
   public getDmInbox(): Promise<DmInbox> {
-    return getDmInbox(this.auth);
+    return getDmInbox(this.getAuth());
   }
 
   /**
@@ -486,7 +489,7 @@ export class Scraper {
     conversationId: string,
     cursor?: DmCursorOptions,
   ): Promise<DmConversationTimeline> {
-    return getDmConversation(conversationId, cursor, this.auth);
+    return getDmConversation(conversationId, cursor, this.getAuth());
   }
 
   /**
@@ -502,7 +505,7 @@ export class Scraper {
     maxMessages = 20,
     cursor?: DmCursorOptions,
   ): AsyncGenerator<DmMessageEntry, void> {
-    return getDmMessages(conversationId, maxMessages, cursor, this.auth);
+    return getDmMessages(conversationId, maxMessages, cursor, this.getAuth());
   }
 
   /**
@@ -629,7 +632,7 @@ export class Scraper {
 
   private getAuthOptions(): Partial<TwitterAuthOptions> {
     return {
-      fetch: this.options?.fetch,
+      fetch: cycleTLSFetch,
       transform: this.options?.transform,
       rateLimitStrategy: this.options?.rateLimitStrategy,
     };

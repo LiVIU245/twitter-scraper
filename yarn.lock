@@ -1312,6 +1312,21 @@
   dependencies:
     "@sinonjs/commons" "^3.0.0"
 
+"@the-convocation/twitter-scraper@^0.19.0":
+  version "0.19.0"
+  resolved "https://registry.yarnpkg.com/@the-convocation/twitter-scraper/-/twitter-scraper-0.19.0.tgz#362596fbd1f47cfb46e12ed0b6101a2fdd18686c"
+  integrity sha512-fkXidRdmlbxa7j1Rf/Gul6UHnsluVGekZyWLzvfjhjWz0FzX6mh5XpYTBeR+8Fa0b9Mx/mxfFCXkF2X3hRMQgw==
+  dependencies:
+    "@sinclair/typebox" "^0.32.20"
+    cross-fetch "^4.0.0-alpha.5"
+    debug "^4.4.1"
+    headers-polyfill "^3.1.2"
+    json-stable-stringify "^1.0.2"
+    otpauth "^9.2.2"
+    set-cookie-parser "^2.6.0"
+    tough-cookie "^4.1.2"
+    tslib "^2.5.2"
+
 "@tsconfig/node10@^1.0.7":
   version "1.0.11"
   resolved "https://registry.yarnpkg.com/@tsconfig/node10/-/node10-1.0.11.tgz#6ee46400685f130e278128c7b38b7e031ff5b2f2"

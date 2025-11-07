@@ -19,7 +19,6 @@ export interface TimelineUserResultRaw {
 
 export interface TimelineEntryItemContentRaw {
   itemType?: string;
-  __typename?: string;
   tweetDisplayType?: string;
   tweetResult?: {
     result?: TimelineResultRaw;
@@ -313,7 +312,7 @@ function parseResult(result?: TimelineResultRaw): ParseTweetResult {
   }
 
   if(result?.edit_control){
-    tweetResult.tweet.edit_tweet_ids = result.edit_control.edit_tweet_ids;
+    tweetResult.tweet.edit_tweet_ids = result.edit_control?.edit_control_initial?.edit_tweet_ids;
   }
 
   return tweetResult;
@@ -467,7 +466,7 @@ export function parseRepliesTimelineEntryItemContentRaw(
   return null;
 }
 
-function parseAndPush(
+export function parseAndPush(
   tweets: Tweet[],
   content: TimelineEntryItemContentRaw,
   entryId: string,

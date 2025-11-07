@@ -1,8 +1,10 @@
 import {addApiFeatures, requestApi, RequestApiResult} from './api';
+import { Headers } from 'headers-polyfill';
 import { TwitterAuth } from './auth';
 import { apiRequestFactory } from './api-data';
 import {parseEngagementimeline} from "./timeline-relationship";
 import {TimelineData} from "./timeline-v2";
+import {Platform} from "./platform";
 
 export interface Retweet {
   name?: string;
@@ -46,6 +48,8 @@ export async function sendDM(
       messageRequest.toRequestUrl(),
       auth,
       'POST',
+      new Platform(),
+      new Headers(),
       body
   );
 

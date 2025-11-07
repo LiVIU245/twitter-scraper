@@ -48,7 +48,6 @@ export interface LegacyUserRaw {
   has_custom_timelines?: boolean;
   has_extended_profile?: boolean;
   url?: string;
-  can_dm?: boolean;
   id?: number;
   // TODO: Get the proper type of this.
   utc_offset?: any;
@@ -85,7 +84,6 @@ export interface LegacyUserRaw {
   translator_type?: string;
   // TODO: Get the proper type of this.
   withheld_in_countries?: any[];
-  followed_by?: boolean;
 }
 
 /**

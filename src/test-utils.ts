@@ -16,7 +16,7 @@ export interface ScraperTestOptions {
 }
 
 export async function getScraper(
-  options: Partial<ScraperTestOptions> = { authMethod: 'cookies' },
+  options: Partial<ScraperTestOptions> = { authMethod: 'password' },
 ) {
   const username = process.env['TWITTER_USERNAME'];
   const password = process.env['TWITTER_PASSWORD'];
@@ -46,7 +46,6 @@ export async function getScraper(
   }
 
   const scraper = new Scraper({
-    fetch: cycleTLSFetch,
     transform: {
       request: (input, init) => {
         if (agent) {
@@ -60,9 +59,7 @@ export async function getScraper(
   if (options.authMethod === 'password') {
     await scraper.login(username!, password!, email, twoFactorSecret);
   } else if (options.authMethod === 'cookies') {
-    await scraper.setCookies(
-      JSON.parse(cookies!).map((c: string) => Cookie.fromJSON(c)),
-    );
+    await scraper.setCookies(JSON.parse(cookies!));
   }
 
   return scraper;
