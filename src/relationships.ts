@@ -1,6 +1,6 @@
 import { addApiFeatures, requestApi } from './api';
 import { TwitterAuth } from './auth';
-import { Profile, getUserIdByScreenName } from './profile';
+import { Profile } from './profile';
 import { QueryProfilesResponse } from './timeline-v1';
 import { getUserTimeline } from './timeline-async';
 import {
@@ -8,6 +8,7 @@ import {
   parseRelationshipTimeline,
 } from './timeline-relationship';
 import stringify from 'json-stable-stringify';
+import { AuthenticationError } from './errors';
 
 export function getFollowing(
   userId: string,
@@ -35,6 +36,12 @@ export async function fetchProfileFollowing(
   auth: TwitterAuth,
   cursor?: string,
 ): Promise<QueryProfilesResponse> {
+  if (!(await auth.isLoggedIn())) {
+    throw new AuthenticationError(
+      'Scraper is not logged-in for profile following.',
+    );
+  }
+
   const timeline = await getFollowingTimeline(
     userId,
     maxProfiles,
@@ -51,6 +58,12 @@ export async function fetchProfileFollowers(
   auth: TwitterAuth,
   cursor?: string,
 ): Promise<QueryProfilesResponse> {
+  if (!(await auth.isLoggedIn())) {
+    throw new AuthenticationError(
+      'Scraper is not logged-in for profile followers.',
+    );
+  }
+
   const timeline = await getFollowersTimeline(
     userId,
     maxProfiles,
@@ -68,7 +81,9 @@ async function getFollowingTimeline(
   cursor?: string,
 ): Promise<RelationshipTimeline> {
   if (!auth.isLoggedIn()) {
-    throw new Error('Scraper is not logged-in for profile following.');
+    throw new AuthenticationError(
+      'Scraper is not logged-in for profile following.',
+    );
   }
 
   if (maxItems > 50) {
@@ -94,11 +109,13 @@ async function getFollowingTimeline(
   }
 
   const params = new URLSearchParams();
-  params.set('features', stringify(features));
-  params.set('variables', stringify(variables));
+  const featuresStr = stringify(features);
+  const variablesStr = stringify(variables);
+  if (featuresStr) params.set('features', featuresStr);
+  if (variablesStr) params.set('variables', variablesStr);
 
   const res = await requestApi<RelationshipTimeline>(
-    `https://twitter.com/i/api/graphql/iSicc7LrzWGBgDPL0tM_TQ/Following?${params.toString()}`,
+    `https://x.com/i/api/graphql/iSicc7LrzWGBgDPL0tM_TQ/Following?${params.toString()}`,
     auth,
   );
 
@@ -116,7 +133,9 @@ async function getFollowersTimeline(
   cursor?: string,
 ): Promise<RelationshipTimeline> {
   if (!auth.isLoggedIn()) {
-    throw new Error('Scraper is not logged-in for profile followers.');
+    throw new AuthenticationError(
+      'Scraper is not logged-in for profile followers.',
+    );
   }
 
   if (maxItems > 50) {
@@ -142,11 +161,13 @@ async function getFollowersTimeline(
   }
 
   const params = new URLSearchParams();
-  params.set('features', stringify(features));
-  params.set('variables', stringify(variables));
+  const featuresStr = stringify(features);
+  const variablesStr = stringify(variables);
+  if (featuresStr) params.set('features', featuresStr);
+  if (variablesStr) params.set('variables', variablesStr);
 
   const res = await requestApi<RelationshipTimeline>(
-    `https://twitter.com/i/api/graphql/rRXFSG5vR6drKr5M37YOTw/Followers?${params.toString()}`,
+    `https://x.com/i/api/graphql/rRXFSG5vR6drKr5M37YOTw/Followers?${params.toString()}`,
     auth,
   );
 

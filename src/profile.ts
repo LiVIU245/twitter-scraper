@@ -1,7 +1,13 @@
-import stringify from 'json-stable-stringify';
 import { requestApi, RequestApiResult } from './api';
 import { TwitterAuth } from './auth';
 import { TwitterApiErrorRaw } from './errors';
+import { apiRequestFactory } from './api-data';
+
+export interface CoreUserRaw {
+  created_at?: string;
+  name?: string;
+  screen_name?: string;
+}
 
 export interface LegacyUserRaw {
   followed_by: boolean;
@@ -11,8 +17,15 @@ export interface LegacyUserRaw {
   entities?: {
     url?: {
       urls?: {
+        url?: string;
         expanded_url?: string;
+        display_url?: string;
+        indices?: [number, number];
       }[];
+    };
+    description?: {
+      // TODO: Get the proper type of this.
+      urls?: any[];
     };
   };
   favourites_count?: number;
@@ -23,7 +36,7 @@ export interface LegacyUserRaw {
   id_str?: string;
   listed_count?: number;
   name?: string;
-  location: string;
+  location?: string;
   geo_enabled?: boolean;
   pinned_tweet_ids_str?: string[];
   profile_background_color?: string;
@@ -35,6 +48,44 @@ export interface LegacyUserRaw {
   has_custom_timelines?: boolean;
   has_extended_profile?: boolean;
   url?: string;
+  can_dm?: boolean;
+  id?: number;
+  // TODO: Get the proper type of this.
+  utc_offset?: any;
+  // TODO: Get the proper type of this.
+  time_zone?: any;
+  // TODO: Get the proper type of this.
+  lang?: any;
+  contributors_enabled?: boolean;
+  is_translator?: boolean;
+  is_translation_enabled?: boolean;
+  profile_background_image_url?: string;
+  profile_background_image_url_https?: string;
+  profile_background_tile?: boolean;
+  profile_image_url?: string;
+  profile_link_color?: string;
+  profile_sidebar_border_color?: string;
+  profile_sidebar_fill_color?: string;
+  profile_text_color?: string;
+  profile_use_background_image?: boolean;
+  default_profile?: boolean;
+  default_profile_image?: boolean;
+  can_secret_dm?: boolean;
+  can_media_tag?: boolean;
+  following?: boolean;
+  follow_request_sent?: boolean;
+  notifications?: boolean;
+  blocking?: boolean;
+  subscribed_by?: boolean;
+  blocked_by?: boolean;
+  want_retweets?: boolean;
+  dm_blocked_by?: boolean;
+  dm_blocking?: boolean;
+  business_profile_state?: string;
+  translator_type?: string;
+  // TODO: Get the proper type of this.
+  withheld_in_countries?: any[];
+  followed_by?: boolean;
 }
 
 /**
@@ -57,7 +108,7 @@ export interface Profile {
   joined?: Date;
   likesCount?: number;
   listedCount?: number;
-  location: string;
+  location?: string;
   name?: string;
   pinnedTweetIds?: string[];
   tweetsCount?: number;
@@ -73,11 +124,19 @@ export interface UserRaw {
   data: {
     user: {
       result: {
+        __typename?: string;
+        message?: string;
+        reason?: string;
         rest_id?: string;
         is_blue_verified?: boolean;
         legacy: LegacyUserRaw;
-        __typename?: string;
-        message?: string;
+        core?: CoreUserRaw;
+        avatar?: {
+          image_url?: string;
+        };
+        location?: {
+          location?: string;
+        };
       };
     };
   };
@@ -89,39 +148,38 @@ function getAvatarOriginalSizeUrl(avatarUrl: string | undefined) {
 }
 
 export function parseProfile(
-  user: LegacyUserRaw,
+  legacy: LegacyUserRaw,
   isBlueVerified?: boolean,
 ): Profile {
   const profile: Profile = {
-    avatar: user.profile_image_url_https,
-    banner: user.profile_banner_url,
-    biography: user.description,
-    followersCount: user.followers_count,
-    followingCount: user.friends_count,
-    friendsCount: user.friends_count,
-    mediaCount: user.media_count,
-    id: user.id_str,
-    isPrivate: user.protected ?? false,
-    isVerified: user.verified,
-    likesCount: user.favourites_count,
-    listedCount: user.listed_count,
-    location: user.location,
-    name: user.name,
-    pinnedTweetIds: user.pinned_tweet_ids_str,
-    tweetsCount: user.statuses_count,
-    url: `https://twitter.com/${user.screen_name}`,
-    userId: user.id_str,
-    username: user.screen_name,
+    avatar: getAvatarOriginalSizeUrl(legacy.profile_image_url_https),
+    banner: legacy.profile_banner_url,
+    biography: legacy.description,
+    followersCount: legacy.followers_count,
+    followingCount: legacy.friends_count,
+    friendsCount: legacy.friends_count,
+    mediaCount: legacy.media_count,
+    isPrivate: legacy.protected ?? false,
+    isVerified: legacy.verified,
+    likesCount: legacy.favourites_count,
+    listedCount: legacy.listed_count,
+    location: legacy.location,
+    name: legacy.name,
+    pinnedTweetIds: legacy.pinned_tweet_ids_str,
+    tweetsCount: legacy.statuses_count,
+    url: `https://x.com/${legacy.screen_name}`,
+    userId: legacy.id_str,
+    username: legacy.screen_name,
     isBlueVerified: isBlueVerified ?? false,
-    canDm: user.can_dm,
-    followedBy: user.followed_by,
+    canDm: legacy.can_dm,
+    followedBy: legacy.followed_by,
   };
 
-  if (user.created_at != null) {
-    profile.joined = new Date(Date.parse(user.created_at));
+  if (legacy.created_at != null) {
+    profile.joined = new Date(Date.parse(legacy.created_at));
   }
 
-  const urls = user.entities?.url?.urls;
+  const urls = legacy.entities?.url?.urls;
   if (urls?.length != null && urls?.length > 0) {
     profile.website = urls[0].expanded_url;
   }
@@ -133,47 +191,31 @@ export async function getProfile(
   username: string,
   auth: TwitterAuth,
 ): Promise<RequestApiResult<Profile>> {
-  const params = new URLSearchParams();
-  params.set(
-    'variables',
-    stringify({
-      screen_name: username,
-      withSafetyModeUserFields: true,
-    }),
-  );
+  const request = apiRequestFactory.createUserByScreenNameRequest();
+  request.variables.screen_name = username;
 
-  params.set(
-    'features',
-    stringify({
-      hidden_profile_likes_enabled: false,
-      hidden_profile_subscriptions_enabled: false, // Auth-restricted
-      responsive_web_graphql_exclude_directive_enabled: true,
-      verified_phone_label_enabled: false,
-      subscriptions_verification_info_is_identity_verified_enabled: false,
-      subscriptions_verification_info_verified_since_enabled: true,
-      highlights_tweets_tab_ui_enabled: true,
-      creator_subscriptions_tweet_preview_api_enabled: true,
-      responsive_web_graphql_skip_user_profile_image_extensions_enabled: false,
-      responsive_web_graphql_timeline_navigation_enabled: true,
-    }),
-  );
-
-  params.set('fieldToggles', stringify({ withAuxiliaryUserLabels: false }));
-
-  const res = await requestApi<UserRaw>(
-    `https://twitter.com/i/api/graphql/G3KGOASz96M-Qu0nwmGXNg/UserByScreenName?${params.toString()}`,
-    auth,
-  );
+  const res = await requestApi<UserRaw>(request.toRequestUrl(), auth);
   if (!res.success) {
     return res;
   }
 
   const { value } = res;
   const { errors } = value;
-  if (errors != null && errors.length > 0) {
+  if (
+    (!value.data || !value.data.user || !value.data.user.result) &&
+    errors != null &&
+    errors.length > 0
+  ) {
     return {
       success: false,
-      err: new Error(errors[0].message),
+      err: new Error(errors.map((e) => e.message).join('\n')),
+    };
+  }
+
+  if (!value.data || !value.data.user || !value.data.user.result) {
+    return {
+      success: false,
+      err: new Error('User not found.'),
     };
   }
 
@@ -187,10 +229,10 @@ export async function getProfile(
   const { result: user } = value.data.user;
   const { legacy } = user;
 
-  if (user.__typename == 'UserUnavailable') {
+  if (user.__typename === 'UserUnavailable' && user?.reason === 'Suspended') {
     return {
       success: false,
-      err: new Error(user.message),
+      err: new Error('User is suspended.'),
     };
   }
 
@@ -202,17 +244,22 @@ export async function getProfile(
   }
 
   legacy.id_str = user.rest_id;
+  legacy.screen_name ??= user.core?.screen_name;
+  legacy.profile_image_url_https ??= user.avatar?.image_url;
+  legacy.created_at ??= user.core?.created_at;
+  legacy.location ??= user.location?.location;
+  legacy.name ??= user.core?.name;
 
   if (legacy.screen_name == null || legacy.screen_name.length === 0) {
     return {
       success: false,
-      err: new Error(`Either ${username} does not exist or is private.`),
+      err: new Error(`User ${username} does not exist or is private.`),
     };
   }
 
   return {
     success: true,
-    value: parseProfile(user.legacy, user.is_blue_verified),
+    value: parseProfile(legacy, user.is_blue_verified),
   };
 }
 

@@ -1,6 +1,7 @@
-import { LegacyUserRaw } from './profile';
+import { CoreUserRaw, LegacyUserRaw } from './profile';
 import { parseMediaGroups, reconstructTweetHtml } from './timeline-tweet-util';
 import {
+  EditControlInitialRaw,
   LegacyTweetRaw,
   ParseTweetResult,
   QueryTweetsResponse,
@@ -18,6 +19,7 @@ export interface TimelineUserResultRaw {
 
 export interface TimelineEntryItemContentRaw {
   itemType?: string;
+  __typename?: string;
   tweetDisplayType?: string;
   tweetResult?: {
     result?: TimelineResultRaw;
@@ -38,12 +40,15 @@ export interface TimelineEntryItemContentRaw {
 export interface TimelineEntryRaw {
   entryId: string;
   content?: {
+    entryType?: string;
+    __typename?: string;
     cursorType?: string;
     value?: string;
     items?: {
+      entryId?: string;
       item?: {
         content?: TimelineEntryItemContentRaw;
-        itemContent?: TimelineEntryItemContentRaw;
+        itemContent?: SearchEntryItemContentRaw;
       };
     }[];
     itemContent?: TimelineEntryItemContentRaw;
@@ -88,7 +93,8 @@ export interface TimelineV2 {
   data?: {
     user?: {
       result?: {
-        timeline_v2?: {
+        __typename?: string;
+        timeline?: {
           timeline?: {
             instructions?: TimelineInstruction[];
           };
@@ -120,9 +126,19 @@ export interface ThreadedConversation {
   };
 }
 
+function getLegacyTweetId(tweet: Readonly<LegacyTweetRaw>): string | undefined {
+  if (tweet.id_str) {
+    return tweet.id_str;
+  }
+
+  return tweet.conversation_id_str;
+}
+
 export function parseLegacyTweet(
-  user?: LegacyUserRaw,
-  tweet?: LegacyTweetRaw,
+  coreUser?: Readonly<CoreUserRaw>,
+  user?: Readonly<LegacyUserRaw>,
+  tweet?: Readonly<LegacyTweetRaw>,
+  editControl?: Readonly<EditControlInitialRaw>,
 ): ParseTweetResult {
   if (tweet == null) {
     return {
@@ -138,15 +154,12 @@ export function parseLegacyTweet(
     };
   }
 
-  if (!tweet.id_str) {
-    if (!tweet.conversation_id_str) {
-      return {
-        success: false,
-        err: new Error('Tweet ID was not found in object.'),
-      };
-    }
-
-    tweet.id_str = tweet.conversation_id_str;
+  const tweetId = getLegacyTweetId(tweet);
+  if (!tweetId) {
+    return {
+      success: false,
+      err: new Error('Tweet ID was not found in object.'),
+    };
   }
 
   const hashtags = tweet.entities?.hashtags ?? [];
@@ -158,9 +171,16 @@ export function parseLegacyTweet(
   const urls = tweet.entities?.urls ?? [];
   const { photos, videos, sensitiveContent } = parseMediaGroups(media);
 
+  // The edit tweets array always contains the original tweet, even if it has not been edited
+  const tweetVersions = editControl?.edit_tweet_ids ?? [tweetId];
+
+  const name = user.name ?? coreUser?.name;
+  const username = user.screen_name ?? coreUser?.screen_name;
   const tw: Tweet = {
+    __raw_UNSTABLE: tweet,
+    bookmarkCount: tweet.bookmark_count,
     conversationId: tweet.conversation_id_str,
-    id: tweet.id_str,
+    id: tweetId,
     hashtags: hashtags
       .filter(isFieldDefined('text'))
       .map((hashtag) => hashtag.text),
@@ -170,8 +190,8 @@ export function parseLegacyTweet(
       username: mention.screen_name,
       name: mention.name,
     })),
-    name: user.name,
-    permanentUrl: `https://twitter.com/${user.screen_name}/status/${tweet.id_str}`,
+    name: name,
+    permanentUrl: `https://x.com/${username}/status/${tweetId}`,
     photos,
     replies: tweet.reply_count,
     retweets: tweet.retweet_count,
@@ -181,11 +201,13 @@ export function parseLegacyTweet(
       .filter(isFieldDefined('expanded_url'))
       .map((url) => url.expanded_url),
     userId: tweet.user_id_str,
-    username: user.screen_name,
+    username: username,
     profileImageUrl: user.profile_image_url_https,
     videos,
     isQuoted: false,
     isReply: false,
+    isEdited: tweetVersions.length > 1,
+    versions: tweetVersions,
     isRetweet: false,
     isPin: false,
     sensitiveContent: false,
@@ -221,8 +243,10 @@ export function parseLegacyTweet(
 
     if (retweetedStatusResult) {
       const parsedResult = parseLegacyTweet(
+        retweetedStatusResult?.core?.user_results?.result?.core,
         retweetedStatusResult?.core?.user_results?.result?.legacy,
         retweetedStatusResult?.legacy,
+        retweetedStatusResult?.edit_control?.edit_control_initial,
       );
 
       if (parsedResult.success) {
@@ -236,7 +260,7 @@ export function parseLegacyTweet(
     tw.views = views;
   }
 
-  if (pinnedTweets.has(tweet.id_str)) {
+  if (pinnedTweets.has(tweetId)) {
     // TODO: Update tests so this can be assigned at the tweet declaration
     tw.isPin = true;
   }
@@ -260,8 +284,10 @@ function parseResult(result?: TimelineResultRaw): ParseTweetResult {
   }
 
   const tweetResult = parseLegacyTweet(
+    result?.core?.user_results?.result?.core,
     result?.core?.user_results?.result?.legacy,
     result?.legacy,
+    result?.edit_control?.edit_control_initial,
   );
   if (!tweetResult.success) {
     return tweetResult;
@@ -293,6 +319,18 @@ function parseResult(result?: TimelineResultRaw): ParseTweetResult {
   return tweetResult;
 }
 
+const expectedEntryTypes = ['tweet', 'profile-conversation'];
+
+function getTimelineInstructionEntries(
+  instruction: TimelineInstruction,
+): TimelineEntryRaw[] {
+  const entries = instruction.entries ?? [];
+  if (instruction.entry) {
+    entries.push(instruction.entry);
+  }
+  return entries;
+}
+
 export function parseTimelineTweetsV2(
   timeline: TimelineV2,
 ): QueryTweetsResponse {
@@ -300,14 +338,14 @@ export function parseTimelineTweetsV2(
   let topCursor: string | undefined;
   const tweets: Tweet[] = [];
   const instructions =
-    timeline.data?.user?.result?.timeline_v2?.timeline?.instructions ?? [];
+    timeline.data?.user?.result?.timeline?.timeline?.instructions ?? [];
   for (const instruction of instructions) {
-    const entries = instruction.entries ?? [];
-
+    const entries = getTimelineInstructionEntries(instruction);
     for (const entry of entries) {
       const entryContent = entry.content;
       if (!entryContent) continue;
 
+      // Handle pagination
       if (entryContent.cursorType === 'Bottom') {
         bottomCursor = entryContent.value;
         continue;
@@ -317,12 +355,22 @@ export function parseTimelineTweetsV2(
       }
 
       const idStr = entry.entryId;
-      if (!idStr.startsWith('tweet')) {
+      if (
+        !expectedEntryTypes.some((entryType) => idStr.startsWith(entryType))
+      ) {
         continue;
       }
 
       if (entryContent.itemContent) {
+        // Typically TimelineTimelineTweet entries
         parseAndPush(tweets, entryContent.itemContent, idStr);
+      } else if (entryContent.items) {
+        // Typically TimelineTimelineModule entries
+        for (const item of entryContent.items) {
+          if (item.item?.itemContent) {
+            parseAndPush(tweets, item.item.itemContent, idStr);
+          }
+        }
       }
     }
   }
@@ -335,13 +383,19 @@ export function parseTimelineEntryItemContentRaw(
   entryId: string,
   isConversation = false,
 ) {
-  const result = content.tweet_results?.result ?? content.tweetResult?.result;
+  let result = content.tweet_results?.result ?? content.tweetResult?.result;
 
-  if (result?.__typename === 'Tweet') {
-    if (result.legacy) {
-      result.legacy.id_str = entryId
-        .replace('conversation-', '')
-        .replace('tweet-', '');
+  if (
+    result?.__typename === 'Tweet' ||
+    (result?.__typename === 'TweetWithVisibilityResults' && result?.tweet)
+  ) {
+    if (result?.__typename === 'TweetWithVisibilityResults')
+      result = result.tweet;
+
+    if (result?.legacy) {
+      result.legacy.id_str =
+        result.rest_id ??
+        entryId.replace('conversation-', '').replace('tweet-', '');
     }
 
     const tweetResult = parseResult(result);
@@ -455,7 +509,7 @@ export function parseThreadedConversation(
     [];
 
   for (const instruction of instructions) {
-    const entries = instruction.entries ?? [];
+    const entries = getTimelineInstructionEntries(instruction);
     for (const entry of entries) {
       const entryContent = entry.content?.itemContent;
       if (entryContent) {
@@ -463,7 +517,7 @@ export function parseThreadedConversation(
       }
 
       for (const item of entry.content?.items ?? []) {
-        const itemContent = item.item?.content;
+        const itemContent = item.item?.itemContent;
         if (itemContent) {
           parseAndPush(tweets, itemContent, entry.entryId, true);
         }

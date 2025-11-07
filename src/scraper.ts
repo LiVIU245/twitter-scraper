@@ -1,7 +1,7 @@
 import { Cookie } from 'tough-cookie';
 import { bearerToken, FetchTransformOptions, RequestApiResult } from './api';
 import { TwitterAuth, TwitterAuthOptions, TwitterGuestAuth } from './auth';
-import { TwitterUserAuth } from './auth-user';
+import { FlowSubtaskHandler, TwitterUserAuth } from './auth-user';
 import { getProfile, getUserIdByScreenName, Profile } from './profile';
 import {
   fetchSearchProfiles,
@@ -23,18 +23,37 @@ import {
   getTweetAnonymous,
   getTweets,
   getLatestTweet,
+  getLikedTweets,
   getTweetWhere,
   getTweetsWhere,
   getTweetsByUserId,
   TweetQuery,
-  getTweet, getTweetReplies, Replier,
+  getTweet,
+    getTweetReplies,
+    Replier,
+  fetchListTweets,
+  getTweetsAndRepliesByUserId,
+  getTweetsAndReplies,
+  fetchLikedTweets,
 } from './tweets';
 import fetch from 'cross-fetch';
-import {getRetweets, Retweet} from "./retweets";
-import {getFavoriters} from "./favoriters";
-import {sendDM} from "./messages";
+import { getRetweets, Retweet } from './retweets';
+import { getFavoriters } from './favoriters';
+import { sendDM } from './messages';
+import { RateLimitStrategy } from './rate-limit';
+import {
+  DmConversationTimeline,
+  DmInbox,
+  DmMessageEntry,
+  DmCursorOptions,
+  getDmConversation,
+  getDmMessages,
+  getDmInbox,
+  findDmConversationsByUserId,
+  DmConversation,
+} from './direct-messages';
 
-const twUrl = 'https://twitter.com';
+const twUrl = 'https://x.com';
 
 export interface ScraperOptions {
   /**
@@ -48,6 +67,11 @@ export interface ScraperOptions {
    * proxy requests through other hosts, for example.
    */
   transform: Partial<FetchTransformOptions>;
+
+  /**
+   * A handling strategy for rate limits (HTTP 429).
+   */
+  rateLimitStrategy: RateLimitStrategy;
 }
 
 /**
@@ -66,6 +90,25 @@ export class Scraper {
    */
   constructor(private readonly options?: Partial<ScraperOptions>) {
     this.token = bearerToken;
+  }
+
+  /**
+   * Registers a subtask handler for the given subtask ID. This
+   * will override any existing handler for the same subtask.
+   * @param subtaskId The ID of the subtask to register the handler for.
+   * @param subtaskHandler The handler function to register.
+   */
+  public registerAuthSubtaskHandler(
+    subtaskId: string,
+    subtaskHandler: FlowSubtaskHandler,
+  ): void {
+    if (this.auth instanceof TwitterUserAuth) {
+      this.auth.registerSubtaskHandler(subtaskId, subtaskHandler);
+    }
+
+    if (this.authTrends instanceof TwitterUserAuth) {
+      this.authTrends.registerSubtaskHandler(subtaskId, subtaskHandler);
+    }
   }
 
   /**
@@ -168,6 +211,36 @@ export class Scraper {
   }
 
   /**
+   * Fetches list tweets from Twitter.
+   * @param listId The list id
+   * @param maxTweets The maximum number of tweets to return.
+   * @param cursor The search cursor, which can be passed into further requests for more results.
+   * @returns A page of results, containing a cursor that can be used in further requests.
+   */
+  public fetchListTweets(
+    listId: string,
+    maxTweets: number,
+    cursor?: string,
+  ): Promise<QueryTweetsResponse> {
+    return fetchListTweets(listId, maxTweets, cursor, this.auth);
+  }
+
+  /**
+   * Fetch the tweets a user has liked
+   * @param userId The user whose liked tweets should be returned
+   * @param maxTweets The maximum number of tweets to return.
+   * @param cursor The search cursor, which can be passed into further requests for more results.
+   * @returns A page of results, containing a cursor that can be used in further requests.
+   */
+  public fetchLikedTweets(
+    userId: string,
+    maxTweets: number,
+    cursor?: string,
+  ): Promise<QueryTweetsResponse> {
+    return fetchLikedTweets(userId, maxTweets, cursor, this.auth);
+  }
+
+  /**
    * Fetch the profiles a user is following
    * @param userId The user whose following should be returned
    * @param maxProfiles The maximum number of profiles to return.
@@ -242,6 +315,16 @@ export class Scraper {
   }
 
   /**
+   * Fetches liked tweets from a Twitter user. Requires authentication.
+   * @param user The user whose likes should be returned.
+   * @param maxTweets The maximum number of tweets to return. Defaults to `200`.
+   * @returns An {@link AsyncGenerator} of liked tweets from the provided user.
+   */
+  public getLikedTweets(user: string, maxTweets = 200): AsyncGenerator<Tweet> {
+    return getLikedTweets(user, maxTweets, this.auth);
+  }
+
+  /**
    * Fetches tweets from a Twitter user using their ID.
    * @param userId The user whose tweets should be returned.
    * @param maxTweets The maximum number of tweets to return. Defaults to `200`.
@@ -252,6 +335,32 @@ export class Scraper {
     maxTweets = 200,
   ): AsyncGenerator<Tweet, void> {
     return getTweetsByUserId(userId, maxTweets, this.getAuth());
+  }
+
+  /**
+   * Fetches tweets and replies from a Twitter user.
+   * @param user The user whose tweets should be returned.
+   * @param maxTweets The maximum number of tweets to return. Defaults to `200`.
+   * @returns An {@link AsyncGenerator} of tweets from the provided user.
+   */
+  public getTweetsAndReplies(
+    user: string,
+    maxTweets = 200,
+  ): AsyncGenerator<Tweet> {
+    return getTweetsAndReplies(user, maxTweets, this.auth);
+  }
+
+  /**
+   * Fetches tweets and replies from a Twitter user using their ID.
+   * @param userId The user whose tweets should be returned.
+   * @param maxTweets The maximum number of tweets to return. Defaults to `200`.
+   * @returns An {@link AsyncGenerator} of tweets from the provided user.
+   */
+  public getTweetsAndRepliesByUserId(
+    userId: string,
+    maxTweets = 200,
+  ): AsyncGenerator<Tweet, void> {
+    return getTweetsAndRepliesByUserId(userId, maxTweets, this.auth);
   }
 
   /**
@@ -358,6 +467,59 @@ export class Scraper {
   }
 
   /**
+   * Retrieves the direct message inbox for the authenticated user.
+   *
+   * @return A promise that resolves to an object representing the direct message inbox.
+   */
+  public getDmInbox(): Promise<DmInbox> {
+    return getDmInbox(this.auth);
+  }
+
+  /**
+   * Retrieves the direct message conversation for the specified conversation ID.
+   *
+   * @param conversationId - The unique identifier of the DM conversation to retrieve.
+   * @param cursor - Use `maxId` to get messages before a message ID (older messages), or `minId` to get messages after a message ID (newer messages).
+   * @return A promise that resolves to the timeline of the DM conversation.
+   */
+  public getDmConversation(
+    conversationId: string,
+    cursor?: DmCursorOptions,
+  ): Promise<DmConversationTimeline> {
+    return getDmConversation(conversationId, cursor, this.auth);
+  }
+
+  /**
+   * Retrieves direct messages from a specific conversation.
+   *
+   * @param conversationId - The unique identifier of the conversation to fetch messages from.
+   * @param [maxMessages=20] - The maximum number of messages to retrieve per request.
+   * @param cursor - Use `maxId` to get messages before a message ID (older messages), or `minId` to get messages after a message ID (newer messages).
+   * @returns An {@link AsyncGenerator} of messages from the provided conversation.
+   */
+  public getDmMessages(
+    conversationId: string,
+    maxMessages = 20,
+    cursor?: DmCursorOptions,
+  ): AsyncGenerator<DmMessageEntry, void> {
+    return getDmMessages(conversationId, maxMessages, cursor, this.auth);
+  }
+
+  /**
+   * Retrieves a list of direct message conversations for a specific user based on their user ID.
+   *
+   * @param inbox - The DM inbox containing all available conversations.
+   * @param userId - The unique identifier of the user whose DM conversations are to be retrieved.
+   * @return An array of DM conversations associated with the specified user ID.
+   */
+  public findDmConversationsByUserId(
+    inbox: DmInbox,
+    userId: string,
+  ): DmConversation[] {
+    return findDmConversationsByUserId(inbox, userId);
+  }
+
+  /**
    * Returns if the scraper has a guest token. The token may not be valid.
    * @returns `true` if the scraper has a guest token; otherwise `false`.
    */
@@ -380,16 +542,18 @@ export class Scraper {
    * searches.
    * @param username The username of the Twitter account to login with.
    * @param password The password of the Twitter account to login with.
-   * @param email The password to log in with, if you have email confirmation enabled.
+   * @param email The email to log in with, if you have email confirmation enabled.
+   * @param twoFactorSecret The secret to generate two factor authentication tokens with, if you have two factor authentication enabled.
    */
   public async login(
     username: string,
     password: string,
     email?: string,
+    twoFactorSecret?: string,
   ): Promise<void> {
     // Swap in a real authorizer for all requests
     const userAuth = new TwitterUserAuth(this.token, this.getAuthOptions());
-    await userAuth.login(username, password, email);
+    await userAuth.login(username, password, email, twoFactorSecret);
     this.auth.push(userAuth);
   }
 
@@ -408,7 +572,11 @@ export class Scraper {
    * @returns All cookies for the current session.
    */
   public async getCookies(index: number): Promise<Cookie[]> {
-    return await this.auth[index].cookieJar().getCookies(twUrl);
+    return await this.auth[index]
+      .cookieJar()
+      .getCookies(
+        typeof document !== 'undefined' ? document.location.toString() : twUrl,
+      );
   }
 
   /**
@@ -463,6 +631,7 @@ export class Scraper {
     return {
       fetch: this.options?.fetch,
       transform: this.options?.transform,
+      rateLimitStrategy: this.options?.rateLimitStrategy,
     };
   }
 

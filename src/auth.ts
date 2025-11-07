@@ -1,21 +1,39 @@
-import { CookieJar } from 'tough-cookie';
+import { Cookie, CookieJar, MemoryCookieStore } from 'tough-cookie';
 import { updateCookieJar } from './requests';
 import { Headers } from 'headers-polyfill';
 import fetch from 'cross-fetch';
 import { FetchTransformOptions } from './api';
+import {
+  RateLimitEvent,
+  RateLimitStrategy,
+  WaitingRateLimitStrategy,
+} from './rate-limit';
+import { AuthenticationError } from './errors';
+import debug from 'debug';
+
+const log = debug('twitter-scraper:auth');
 
 export interface TwitterAuthOptions {
   fetch: typeof fetch;
   transform: Partial<FetchTransformOptions>;
+  rateLimitStrategy: RateLimitStrategy;
 }
 
 export interface TwitterAuth {
   fetch: typeof fetch;
 
   /**
+   * How to behave when being rate-limited.
+   * @param event The event information.
+   */
+  onRateLimit(event: RateLimitEvent): Promise<void>;
+
+  /**
    * Returns the current cookie jar.
    */
   cookieJar(): CookieJar;
+
+  getCookies(): Promise<Cookie[]>;
 
   /**
    * Returns if a user is logged-in to Twitter through this instance.
@@ -27,9 +45,15 @@ export interface TwitterAuth {
    * Logs into a Twitter account.
    * @param username The username to log in with.
    * @param password The password to log in with.
-   * @param email The password to log in with, if you have email confirmation enabled.
+   * @param email The email to log in with, if you have email confirmation enabled.
+   * @param twoFactorSecret The secret to generate two factor authentication tokens with, if you have two factor authentication enabled.
    */
-  login(username: string, password: string, email?: string): Promise<void>;
+  login(
+    username: string,
+    password: string,
+    email?: string,
+    twoFactorSecret?: string,
+  ): Promise<void>;
 
   /**
    * Logs out of the current session.
@@ -89,6 +113,7 @@ export class TwitterGuestAuth implements TwitterAuth {
   protected jar: CookieJar;
   protected guestToken?: string;
   protected guestCreatedAt?: Date;
+  protected rateLimitStrategy: RateLimitStrategy;
 
   fetch: typeof fetch;
 
@@ -97,8 +122,14 @@ export class TwitterGuestAuth implements TwitterAuth {
     protected readonly options?: Partial<TwitterAuthOptions>,
   ) {
     this.fetch = withTransform(options?.fetch ?? fetch, options?.transform);
+    this.rateLimitStrategy =
+      options?.rateLimitStrategy ?? new WaitingRateLimitStrategy();
     this.bearerToken = bearerToken;
     this.jar = new CookieJar();
+  }
+
+  async onRateLimit(event: RateLimitEvent): Promise<void> {
+    await this.rateLimitStrategy.onRateLimit(event);
   }
 
   cookieJar(): CookieJar {
@@ -137,62 +168,113 @@ export class TwitterGuestAuth implements TwitterAuth {
     return new Date(this.guestCreatedAt);
   }
 
-  async installTo(headers: Headers, url: string): Promise<void> {
+  async installTo(headers: Headers): Promise<void> {
     if (this.shouldUpdate()) {
       await this.updateGuestToken();
     }
 
     const token = this.guestToken;
     if (token == null) {
-      throw new Error('Authentication token is null or undefined.');
+      throw new AuthenticationError(
+        'Authentication token is null or undefined.',
+      );
     }
 
     headers.set('authorization', `Bearer ${this.bearerToken}`);
     headers.set('x-guest-token', token);
 
-    const cookies = await this.jar.getCookies(url);
+    const cookies = await this.getCookies();
     const xCsrfToken = cookies.find((cookie) => cookie.key === 'ct0');
     if (xCsrfToken) {
       headers.set('x-csrf-token', xCsrfToken.value);
     }
 
-    headers.set('cookie', await this.jar.getCookieString(url));
+    headers.set('cookie', await this.getCookieString());
+  }
+
+  protected async setCookie(key: string, value: string): Promise<void> {
+    const cookie = Cookie.parse(`${key}=${value}`);
+    if (!cookie) {
+      throw new Error('Failed to parse cookie.');
+    }
+
+    await this.jar.setCookie(cookie, this.getCookieJarUrl());
+
+    if (typeof document !== 'undefined') {
+      document.cookie = cookie.toString();
+    }
+  }
+
+  public async getCookies(): Promise<Cookie[]> {
+    return this.jar.getCookies(this.getCookieJarUrl());
+  }
+
+  protected async getCookieString(): Promise<string> {
+    const cookies = await this.getCookies();
+    return cookies.map((cookie) => `${cookie.key}=${cookie.value}`).join('; ');
+  }
+
+  protected async removeCookie(key: string): Promise<void> {
+    //@ts-expect-error don't care
+    const store: MemoryCookieStore = this.jar.store;
+    const cookies = await this.jar.getCookies(this.getCookieJarUrl());
+    for (const cookie of cookies) {
+      if (!cookie.domain || !cookie.path) continue;
+      store.removeCookie(cookie.domain, cookie.path, key);
+
+      if (typeof document !== 'undefined') {
+        document.cookie = `${cookie.key}=; Max-Age=0; path=${cookie.path}; domain=${cookie.domain}`;
+      }
+    }
+  }
+
+  private getCookieJarUrl(): string {
+    return typeof document !== 'undefined'
+      ? document.location.toString()
+      : 'https://x.com';
   }
 
   /**
    * Updates the authentication state with a new guest token from the Twitter API.
    */
   protected async updateGuestToken() {
-    const guestActivateUrl = 'https://api.twitter.com/1.1/guest/activate.json';
+    const guestActivateUrl = 'https://api.x.com/1.1/guest/activate.json';
 
     const headers = new Headers({
       Authorization: `Bearer ${this.bearerToken}`,
-      Cookie: await this.jar.getCookieString(guestActivateUrl),
+      Cookie: await this.getCookieString(),
     });
+
+    log(`Making POST request to ${guestActivateUrl}`);
 
     const res = await this.fetch(guestActivateUrl, {
       method: 'POST',
       headers: headers,
+      referrerPolicy: 'no-referrer',
     });
 
     await updateCookieJar(this.jar, res.headers);
 
     if (!res.ok) {
-      throw new Error(await res.text());
+      throw new AuthenticationError(await res.text());
     }
 
     const o = await res.json();
     if (o == null || o['guest_token'] == null) {
-      throw new Error('guest_token not found.');
+      throw new AuthenticationError('guest_token not found.');
     }
 
     const newGuestToken = o['guest_token'];
     if (typeof newGuestToken !== 'string') {
-      throw new Error('guest_token was not a string.');
+      throw new AuthenticationError('guest_token was not a string.');
     }
 
     this.guestToken = newGuestToken;
     this.guestCreatedAt = new Date();
+
+    await this.setCookie('gt', newGuestToken);
+
+    log(`Updated guest token: ${newGuestToken}`);
   }
 
   /**

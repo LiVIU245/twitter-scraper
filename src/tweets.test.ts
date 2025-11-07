@@ -1,5 +1,6 @@
 import { getScraper } from './test-utils';
 import { Mention, Tweet } from './tweets';
+import { QueryTweetsResponse } from './timeline-v1';
 
 test('scraper can get tweet', async () => {
   const expected: Tweet = {
@@ -9,7 +10,7 @@ test('scraper can get tweet', async () => {
     hashtags: [],
     mentions: [],
     name: 'A11y',
-    permanentUrl: 'https://twitter.com/XA11y/status/1585338303800578049',
+    permanentUrl: 'https://x.com/XA11y/status/1585338303800578049',
     photos: [],
     text: 'We’re updating Twitter’s sounds to help make them pleasing to more people, including those with sensory sensitivities. Here’s more on how we did it:\nhttps://t.co/7FKWk7NzHM',
     thread: [],
@@ -23,6 +24,8 @@ test('scraper can get tweet', async () => {
     videos: [],
     isQuoted: false,
     isReply: false,
+    isEdited: false,
+    versions: ['1585338303800578049'],
     isRetweet: false,
     isPin: false,
     sensitiveContent: false,
@@ -30,11 +33,12 @@ test('scraper can get tweet', async () => {
 
   const scraper = await getScraper();
   const actual = await scraper.getTweet('1585338303800578049');
-
+  delete actual?.__raw_UNSTABLE;
   delete actual?.likes;
   delete actual?.replies;
   delete actual?.retweets;
   delete actual?.views;
+  delete actual?.bookmarkCount;
   expect(actual).toEqual(expected);
 });
 
@@ -49,6 +53,84 @@ test('scraper can get tweets without logging in', async () => {
   }
 
   expect(counter).toBeGreaterThanOrEqual(1);
+});
+
+test('scraper can get tweets by user', async () => {
+  const scraper = await getScraper();
+
+  let counter = 0;
+  for await (const tweet of scraper.getTweets('GeminiApp', 10)) {
+    if (tweet) {
+      counter++;
+    }
+  }
+
+  expect(counter).toBeGreaterThanOrEqual(1);
+});
+
+test('scraper can get tweets by user ID', async () => {
+  const scraper = await getScraper();
+
+  let counter = 0;
+  for await (const tweet of scraper.getTweetsByUserId(
+    '1016333328083910656',
+    10,
+  )) {
+    if (tweet) {
+      counter++;
+    }
+  }
+
+  expect(counter).toBeGreaterThanOrEqual(1);
+});
+
+test('scraper can get tweets and replies by user', async () => {
+  const scraper = await getScraper();
+
+  let counter = 0;
+  for await (const tweet of scraper.getTweetsAndReplies('GeminiApp', 10)) {
+    if (tweet) {
+      counter++;
+    }
+  }
+
+  expect(counter).toBeGreaterThanOrEqual(1);
+});
+
+test('scraper can get tweets and replies by user ID', async () => {
+  const scraper = await getScraper();
+
+  let counter = 0;
+  for await (const tweet of scraper.getTweetsAndRepliesByUserId(
+    '1016333328083910656',
+    10,
+  )) {
+    if (tweet) {
+      counter++;
+    }
+  }
+
+  expect(counter).toBeGreaterThanOrEqual(1);
+});
+
+test('scraper can get tweets from list', async () => {
+  const scraper = await getScraper();
+
+  let cursor: string | undefined = undefined;
+  const maxTweets = 30;
+  let nTweets = 0;
+  while (nTweets < maxTweets) {
+    const res: QueryTweetsResponse = await scraper.fetchListTweets(
+      '1736495155002106192',
+      maxTweets,
+      cursor,
+    );
+
+    expect(res.next).toBeTruthy();
+
+    nTweets += res.tweets.length;
+    cursor = res.next;
+  }
 });
 
 test('scraper can get first tweet matching query', async () => {
@@ -115,7 +197,7 @@ test('scraper can get tweet quotes without logging in', async () => {
     hashtags: [],
     mentions: [],
     name: 'Vsauce2',
-    permanentUrl: 'https://twitter.com/VsauceTwo/status/1237110546383724547',
+    permanentUrl: 'https://x.com/VsauceTwo/status/1237110546383724547',
     photos: [
       {
         id: '1237110473486729218',
@@ -133,6 +215,8 @@ test('scraper can get tweet quotes without logging in', async () => {
     videos: [],
     isQuoted: false,
     isReply: false,
+    isEdited: false,
+    versions: ['1237110546383724547'],
     isRetweet: false,
     isPin: false,
     sensitiveContent: false,
@@ -141,10 +225,12 @@ test('scraper can get tweet quotes without logging in', async () => {
   const scraper = await getScraper({ authMethod: 'anonymous' });
   const quote = await scraper.getTweet('1237110897597976576');
   expect(quote?.isQuoted).toBeTruthy();
+  delete quote?.quotedStatus?.__raw_UNSTABLE;
   delete quote?.quotedStatus?.likes;
   delete quote?.quotedStatus?.replies;
   delete quote?.quotedStatus?.retweets;
   delete quote?.quotedStatus?.views;
+  delete quote?.quotedStatus?.bookmarkCount;
   expect(quote?.quotedStatus).toEqual(expected);
 });
 
@@ -156,7 +242,7 @@ test('scraper can get tweet quotes and replies', async () => {
     hashtags: [],
     mentions: [],
     name: 'Vsauce2',
-    permanentUrl: 'https://twitter.com/VsauceTwo/status/1237110546383724547',
+    permanentUrl: 'https://x.com/VsauceTwo/status/1237110546383724547',
     photos: [
       {
         id: '1237110473486729218',
@@ -174,6 +260,8 @@ test('scraper can get tweet quotes and replies', async () => {
     videos: [],
     isQuoted: false,
     isReply: false,
+    isEdited: false,
+    versions: ['1237110546383724547'],
     isRetweet: false,
     isPin: false,
     sensitiveContent: false,
@@ -182,10 +270,12 @@ test('scraper can get tweet quotes and replies', async () => {
   const scraper = await getScraper();
   const quote = await scraper.getTweet('1237110897597976576');
   expect(quote?.isQuoted).toBeTruthy();
+  delete quote?.quotedStatus?.__raw_UNSTABLE;
   delete quote?.quotedStatus?.likes;
   delete quote?.quotedStatus?.replies;
   delete quote?.quotedStatus?.retweets;
   delete quote?.quotedStatus?.views;
+  delete quote?.quotedStatus?.bookmarkCount;
   expect(quote?.quotedStatus).toEqual(expected);
 
   const reply = await scraper.getTweet('1237111868445134850');
@@ -193,46 +283,58 @@ test('scraper can get tweet quotes and replies', async () => {
   if (reply != null) {
     reply.isReply = false;
   }
+  delete reply?.inReplyToStatus?.__raw_UNSTABLE;
   delete reply?.inReplyToStatus?.likes;
   delete reply?.inReplyToStatus?.replies;
   delete reply?.inReplyToStatus?.retweets;
   delete reply?.inReplyToStatus?.views;
+  delete reply?.inReplyToStatus?.bookmarkCount;
   expect(reply?.inReplyToStatus).toEqual(expected);
 });
 
 test('scraper can get retweet', async () => {
   const expected: Tweet = {
-    conversationId: '1359151057872580612',
-    html: `We’ve seen an increase in attacks against Asian communities and individuals around the world. It’s important to know that this isn’t new; throughout history, Asians have experienced violence and exclusion. However, their diverse lived experiences have largely been overlooked.`,
-    id: '1359151057872580612',
+    conversationId: '1776276954435481937',
+    html: `<br><a href=\"https://t.co/qqiu5ntffp\"><img src=\"https://pbs.twimg.com/amplify_video_thumb/1776276900580622336/img/UknAtyWSZ286nCD3.jpg\"/></a>`,
+    id: '1776276954435481937',
     hashtags: [],
     mentions: [],
-    name: 'Twitter Together',
-    permanentUrl:
-      'https://twitter.com/TwitterTogether/status/1359151057872580612',
+    name: 'federico.',
+    permanentUrl: 'https://x.com/federicosmos/status/1776276954435481937',
     photos: [],
-    text: 'We’ve seen an increase in attacks against Asian communities and individuals around the world. It’s important to know that this isn’t new; throughout history, Asians have experienced violence and exclusion. However, their diverse lived experiences have largely been overlooked.',
+    text: 'https://t.co/qqiu5ntffp',
     thread: [],
-    timeParsed: new Date(Date.UTC(2021, 1, 9, 14, 43, 58, 0)),
-    timestamp: 1612881838,
+    timeParsed: new Date(Date.UTC(2024, 3, 5, 15, 53, 22, 0)),
+    timestamp: 1712332402,
     urls: [],
-    userId: '773578328498372608',
-    username: 'TwitterTogether',
-    videos: [],
+    userId: '2376017065',
+    username: 'federicosmos',
+    videos: [
+      {
+        id: '1776276900580622336',
+        preview:
+          'https://pbs.twimg.com/amplify_video_thumb/1776276900580622336/img/UknAtyWSZ286nCD3.jpg',
+        url: 'https://video.twimg.com/amplify_video/1776276900580622336/vid/avc1/640x360/uACt_egp_hmvPOZF.mp4?tag=14',
+      },
+    ],
     isQuoted: false,
     isReply: false,
+    isEdited: false,
+    versions: ['1776276954435481937'],
     isRetweet: false,
     isPin: false,
     sensitiveContent: false,
   };
 
   const scraper = await getScraper();
-  const retweet = await scraper.getTweet('1685032881872330754');
+  const retweet = await scraper.getTweet('1776285549566808397');
   expect(retweet?.isRetweet).toBeTruthy();
+  delete retweet?.retweetedStatus?.__raw_UNSTABLE;
   delete retweet?.retweetedStatus?.likes;
   delete retweet?.retweetedStatus?.replies;
   delete retweet?.retweetedStatus?.retweets;
   delete retweet?.retweetedStatus?.views;
+  delete retweet?.retweetedStatus?.bookmarkCount;
   expect(retweet?.retweetedStatus).toEqual(expected);
 });
 
@@ -244,7 +346,7 @@ test('scraper can get tweet views', async () => {
     hashtags: [],
     mentions: [],
     name: 'Support',
-    permanentUrl: 'https://twitter.com/Support/status/1606055187348688896',
+    permanentUrl: 'https://x.com/Support/status/1606055187348688896',
     photos: [],
     text: 'Replies and likes don’t tell the whole story. We’re making it easier to tell *just* how many people have seen your Tweets with the addition of view counts, shown right next to likes. Now on iOS and Android, web coming soon.\n\nhttps://t.co/hrlMQyXJfx',
     thread: [],
@@ -256,6 +358,8 @@ test('scraper can get tweet views', async () => {
     videos: [],
     isQuoted: false,
     isReply: false,
+    isEdited: false,
+    versions: ['1606055187348688896'],
     isRetweet: false,
     isPin: false,
     sensitiveContent: false,
@@ -264,10 +368,12 @@ test('scraper can get tweet views', async () => {
   const scraper = await getScraper();
   const actual = await scraper.getTweet('1606055187348688896');
   expect(actual?.views).toBeTruthy();
+  delete actual?.__raw_UNSTABLE;
   delete actual?.likes;
   delete actual?.replies;
   delete actual?.retweets;
   delete actual?.views;
+  delete actual?.bookmarkCount;
   expect(actual).toEqual(expected);
 });
 
@@ -285,4 +391,26 @@ test('scraper can get tweet thread', async () => {
   expect(tweet).not.toBeNull();
   expect(tweet?.isSelfThread).toBeTruthy();
   expect(tweet?.thread.length).toStrictEqual(7);
+});
+
+test('scraper can get liked tweets', async () => {
+  const scraper = await getScraper();
+  const liked = scraper.getLikedTweets('elonmusk', 10);
+  const tweet = await liked.next();
+  expect(tweet.value).not.toBeUndefined();
+  expect(tweet.done).toBeFalsy();
+  expect(tweet.value?.id).not.toBeUndefined();
+});
+
+test('scraper can get animated image as video', async () => {
+  const scraper = await getScraper({ authMethod: 'anonymous' });
+  const tweet = await scraper.getTweet('1947627689285673423');
+
+  const expectedURL = 'https://video.twimg.com/tweet_video/GwdbuOGX0AEuVrj.mp4';
+
+  expect(tweet?.videos).toContainEqual({
+    id: '1947626213477961729',
+    preview: expectedURL,
+    url: expectedURL,
+  });
 });

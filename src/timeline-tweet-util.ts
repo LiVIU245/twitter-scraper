@@ -27,6 +27,8 @@ export function parseMediaGroups(media: TimelineMediaExtendedRaw[]): {
       });
     } else if (m.type === 'video') {
       videos.push(parseVideo(m));
+    } else if (m.type === 'animated_gif') {
+      videos.push(parseGif(m));
     }
 
     const sensitive = m.ext_sensitive_media_warning;
@@ -39,6 +41,26 @@ export function parseMediaGroups(media: TimelineMediaExtendedRaw[]): {
   }
 
   return { sensitiveContent, photos, videos };
+}
+
+function parseGif(
+  m: NonNullableField<TimelineMediaExtendedRaw, 'id_str' | 'media_url_https'>,
+): Video {
+  const gif: Video = {
+    id: m.id_str,
+    preview: m.media_url_https,
+  };
+
+  const variants = m.video_info?.variants ?? [];
+
+  const url = variants.find((v) => v.content_type === 'video/mp4')?.url;
+
+  if (url) {
+    gif.preview = url;
+    gif.url = url;
+  }
+
+  return gif;
 }
 
 function parseVideo(
@@ -106,24 +128,21 @@ export function reconstructTweetHtml(
 }
 
 function linkHashtagHtml(hashtag: string) {
-  return `<a href="https://twitter.com/hashtag/${hashtag.replace(
+  return `<a href="https://x.com/hashtag/${hashtag.replace(
     '#',
     '',
   )}">${hashtag}</a>`;
 }
 
 function linkCashtagHtml(cashtag: string) {
-  return `<a href="https://twitter.com/search?q=%24${cashtag.replace(
+  return `<a href="https://x.com/search?q=%24${cashtag.replace(
     '$',
     '',
   )}">${cashtag}</a>`;
 }
 
 function linkUsernameHtml(username: string) {
-  return `<a href="https://twitter.com/${username.replace(
-    '@',
-    '',
-  )}">${username}</a>`;
+  return `<a href="https://x.com/${username.replace('@', '')}">${username}</a>`;
 }
 
 function unwrapTcoUrlHtml(tweet: LegacyTweetRaw, foundedMedia: string[]) {

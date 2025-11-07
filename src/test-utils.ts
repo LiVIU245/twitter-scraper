@@ -1,5 +1,10 @@
 import { HttpsProxyAgent } from 'https-proxy-agent';
 import { Scraper } from './scraper';
+import { Cookie } from 'tough-cookie';
+import dotenv from 'dotenv';
+import { cycleTLSFetch } from './cycletls-fetch';
+
+dotenv.config({ path: '.env.local' });
 
 export interface ScraperTestOptions {
   /**
@@ -16,6 +21,7 @@ export async function getScraper(
   const username = process.env['TWITTER_USERNAME'];
   const password = process.env['TWITTER_PASSWORD'];
   const email = process.env['TWITTER_EMAIL'];
+  const twoFactorSecret = process.env['TWITTER_2FA_SECRET'];
   const cookies = process.env['TWITTER_COOKIES'];
   const proxyUrl = process.env['PROXY_URL'];
   let agent: any;
@@ -40,6 +46,7 @@ export async function getScraper(
   }
 
   const scraper = new Scraper({
+    fetch: cycleTLSFetch,
     transform: {
       request: (input, init) => {
         if (agent) {
@@ -51,9 +58,11 @@ export async function getScraper(
   });
 
   if (options.authMethod === 'password') {
-    await scraper.login(username!, password!, email);
+    await scraper.login(username!, password!, email, twoFactorSecret);
   } else if (options.authMethod === 'cookies') {
-    await scraper.setCookies(JSON.parse(cookies!));
+    await scraper.setCookies(
+      JSON.parse(cookies!).map((c: string) => Cookie.fromJSON(c)),
+    );
   }
 
   return scraper;

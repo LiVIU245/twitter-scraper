@@ -1,7 +1,7 @@
 import { addApiFeatures, requestApi } from './api';
 import { TwitterAuth } from './auth';
 import { getUserIdByScreenName } from './profile';
-import { QueryTweetsResponse } from './timeline-v1';
+import { LegacyTweetRaw, QueryTweetsResponse } from './timeline-v1';
 import {
   parseTimelineTweetsV2,
   TimelineV2,
@@ -12,6 +12,8 @@ import {
 } from './timeline-v2';
 import { getTweetTimeline } from './timeline-async';
 import { apiRequestFactory } from './api-data';
+import { ListTimeline, parseListTimelineTweets } from './timeline-list';
+import { AuthenticationError } from './errors';
 
 export interface Mention {
   id: string;
@@ -54,12 +56,16 @@ export interface PlaceRaw {
  * A parsed Tweet object.
  */
 export interface Tweet {
+  __raw_UNSTABLE?: LegacyTweetRaw;
+  bookmarkCount?: number;
   conversationId?: string;
   hashtags: string[];
   html?: string;
   id?: string;
   inReplyToStatus?: Tweet;
   inReplyToStatusId?: string;
+  isEdited?: boolean;
+  versions?: string[];
   isQuoted?: boolean;
   isPin?: boolean;
   isReply?: boolean;
@@ -142,6 +148,68 @@ export async function fetchTweets(
   return parseTimelineTweetsV2(res.value);
 }
 
+export async function fetchTweetsAndReplies(
+  userId: string,
+  maxTweets: number,
+  cursor: string | undefined,
+  auth: TwitterAuth,
+): Promise<QueryTweetsResponse> {
+  if (maxTweets > 40) {
+    maxTweets = 40;
+  }
+
+  const userTweetsRequest =
+    apiRequestFactory.createUserTweetsAndRepliesRequest();
+  userTweetsRequest.variables.userId = userId;
+  userTweetsRequest.variables.count = maxTweets;
+  userTweetsRequest.variables.includePromotedContent = false; // true on the website
+
+  if (cursor != null && cursor != '') {
+    userTweetsRequest.variables['cursor'] = cursor;
+  }
+
+  const res = await requestApi<TimelineV2>(
+    userTweetsRequest.toRequestUrl(),
+    auth,
+  );
+
+  if (!res.success) {
+    throw res.err;
+  }
+
+  return parseTimelineTweetsV2(res.value);
+}
+
+export async function fetchListTweets(
+  listId: string,
+  maxTweets: number,
+  cursor: string | undefined,
+  auth: TwitterAuth,
+): Promise<QueryTweetsResponse> {
+  if (maxTweets > 200) {
+    maxTweets = 200;
+  }
+
+  const listTweetsRequest = apiRequestFactory.createListTweetsRequest();
+  listTweetsRequest.variables.listId = listId;
+  listTweetsRequest.variables.count = maxTweets;
+
+  if (cursor != null && cursor != '') {
+    listTweetsRequest.variables['cursor'] = cursor;
+  }
+
+  const res = await requestApi<ListTimeline>(
+    listTweetsRequest.toRequestUrl(),
+    auth,
+  );
+
+  if (!res.success) {
+    throw res.err;
+  }
+
+  return parseListTimelineTweets(res.value);
+}
+
 export function getTweets(
   user: string,
   maxTweets: number,
@@ -167,6 +235,89 @@ export function getTweetsByUserId(
 ): AsyncGenerator<Tweet, void> {
   return getTweetTimeline(userId, maxTweets, (q, mt, c) => {
     return fetchTweets(q, mt, c, auth);
+  });
+}
+
+export function getTweetsAndReplies(
+  user: string,
+  maxTweets: number,
+  auth: TwitterAuth,
+): AsyncGenerator<Tweet, void> {
+  return getTweetTimeline(user, maxTweets, async (q, mt, c) => {
+    const userIdRes = await getUserIdByScreenName(q, auth);
+
+    if (!userIdRes.success) {
+      throw userIdRes.err;
+    }
+
+    const { value: userId } = userIdRes;
+
+    return fetchTweetsAndReplies(userId, mt, c, auth);
+  });
+}
+
+export function getTweetsAndRepliesByUserId(
+  userId: string,
+  maxTweets: number,
+  auth: TwitterAuth,
+): AsyncGenerator<Tweet, void> {
+  return getTweetTimeline(userId, maxTweets, (q, mt, c) => {
+    return fetchTweetsAndReplies(q, mt, c, auth);
+  });
+}
+
+export async function fetchLikedTweets(
+  userId: string,
+  maxTweets: number,
+  cursor: string | undefined,
+  auth: TwitterAuth,
+): Promise<QueryTweetsResponse> {
+  if (!(await auth.isLoggedIn())) {
+    throw new AuthenticationError(
+      'Scraper is not logged-in for fetching liked tweets.',
+    );
+  }
+
+  if (maxTweets > 200) {
+    maxTweets = 200;
+  }
+
+  const userTweetsRequest = apiRequestFactory.createUserLikedTweetsRequest();
+  userTweetsRequest.variables.userId = userId;
+  userTweetsRequest.variables.count = maxTweets;
+  userTweetsRequest.variables.includePromotedContent = false; // true on the website
+
+  if (cursor != null && cursor != '') {
+    userTweetsRequest.variables['cursor'] = cursor;
+  }
+
+  const res = await requestApi<TimelineV2>(
+    userTweetsRequest.toRequestUrl(),
+    auth,
+  );
+
+  if (!res.success) {
+    throw res.err;
+  }
+
+  return parseTimelineTweetsV2(res.value);
+}
+
+export function getLikedTweets(
+  user: string,
+  maxTweets: number,
+  auth: TwitterAuth,
+): AsyncGenerator<Tweet, void> {
+  return getTweetTimeline(user, maxTweets, async (q, mt, c) => {
+    const userIdRes = await getUserIdByScreenName(q, auth);
+
+    if (!userIdRes.success) {
+      throw userIdRes.err;
+    }
+
+    const { value: userId } = userIdRes;
+
+    return fetchLikedTweets(userId, mt, c, auth);
   });
 }
 

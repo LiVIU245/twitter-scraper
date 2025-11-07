@@ -1,4 +1,4 @@
-import { LegacyUserRaw, parseProfile, Profile } from './profile';
+import { CoreUserRaw, LegacyUserRaw, parseProfile, Profile } from './profile';
 import { parseMediaGroups, reconstructTweetHtml } from './timeline-tweet-util';
 import { PlaceRaw, Tweet } from './tweets';
 import { isFieldDefined } from './type-util';
@@ -34,6 +34,7 @@ export interface ExtSensitiveMediaWarningRaw {
 
 export interface VideoVariant {
   bitrate?: number;
+  content_type?: string;
   url?: string;
 }
 
@@ -51,6 +52,13 @@ export interface TimelineMediaExtendedRaw {
   ext_alt_text: string | undefined;
 }
 
+export interface EditControlInitialRaw {
+  edit_tweet_ids?: string[];
+  editable_until_msecs?: `${number}`;
+  edits_remaining?: `${number}`;
+  is_edit_eligible?: boolean;
+}
+
 export interface SearchResultRaw {
   rest_id?: string;
   __typename?: string;
@@ -58,9 +66,13 @@ export interface SearchResultRaw {
     user_results?: {
       result?: {
         is_blue_verified?: boolean;
+        core?: CoreUserRaw;
         legacy?: LegacyUserRaw;
       };
     };
+  };
+  edit_control?: {
+    edit_control_initial?: EditControlInitialRaw;
   };
   views?: {
     count?: string;
@@ -85,10 +97,15 @@ export interface EditControlRaw {
 export interface TimelineResultRaw {
   rest_id?: string;
   __typename?: string;
+  edit_control?: {
+    edit_control_initial?: EditControlInitialRaw;
+  };
   core?: {
     user_results?: {
       result?: {
+        __typename?: string;
         is_blue_verified?: boolean;
+        core?: CoreUserRaw;
         legacy?: LegacyUserRaw;
       };
     };
@@ -108,10 +125,10 @@ export interface TimelineResultRaw {
   };
   legacy?: LegacyTweetRaw;
   tweet?: TimelineResultRaw;
-  edit_control: EditControlRaw
 }
 
 export interface LegacyTweetRaw {
+  bookmark_count?: number;
   conversation_id_str?: string;
   created_at?: string;
   favorite_count?: number;
@@ -235,19 +252,21 @@ export type ParseTweetResult =
 
 function parseTimelineTweet(
   timeline: TimelineV1,
-  id: string,
+  tweetId: string,
 ): ParseTweetResult {
   const tweets = timeline.globalObjects?.tweets ?? {};
-  const tweet = tweets[id];
+  const tweet: Readonly<LegacyTweetRaw> | undefined = tweets[tweetId];
   if (tweet?.user_id_str == null) {
     return {
       success: false,
-      err: new Error(`Tweet "${id}" was not found in the timeline object.`),
+      err: new Error(
+        `Tweet "${tweetId}" was not found in the timeline object.`,
+      ),
     };
   }
 
   const users = timeline.globalObjects?.users ?? {};
-  const user = users[tweet.user_id_str];
+  const user: Readonly<LegacyUserRaw> | undefined = users[tweet.user_id_str];
   if (user?.screen_name == null) {
     return {
       success: false,
@@ -265,8 +284,9 @@ function parseTimelineTweet(
   const { photos, videos, sensitiveContent } = parseMediaGroups(media);
 
   const tw: Tweet = {
+    __raw_UNSTABLE: tweet,
     conversationId: tweet.conversation_id_str,
-    id,
+    id: tweetId,
     hashtags: hashtags
       .filter(isFieldDefined('text'))
       .map((hashtag) => hashtag.text),
@@ -277,7 +297,7 @@ function parseTimelineTweet(
       name: mention.name,
     })),
     name: user.name,
-    permanentUrl: `https://twitter.com/${user.screen_name}/status/${id}`,
+    permanentUrl: `https://x.com/${user.screen_name}/status/${tweetId}`,
     photos,
     replies: tweet.reply_count,
     retweets: tweet.retweet_count,
